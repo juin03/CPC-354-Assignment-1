@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>CPC354 Demo - Extended</title>
+
+    <!-- Link CSS, JS, and WebGL -->
+    <script type="text/javascript" src="Common/webgl-utils.js"></script>
+    <script type="text/javascript" src="Common/initShaders.js"></script>
+    <script type="text/javascript" src="Common/MV.js"></script>
+    <script type="text/javascript" src="Assignment.js"></script>
+    <link rel="stylesheet" type="text/css" href="Assignment.css">
+
+
+	<!-- Define the vertex shader -->
+	<script id="vertex-shader" type="x-shader/x-vertex">
+		// Declare the global variable(s) for draw calls
+		uniform mat4 projectionMatrix;
+		uniform mat4 modelViewMatrix;
+		
+		// Declare the input variable(s) to receive per-vertex data from the application
+		attribute vec4 vPosition;
+		attribute vec4 vColor;
+		
+		// Declare the varying variable(s) to pass data to the fragment shader
+		varying vec4 fColor;
+
+		void main()
+		{
+			gl_Position = projectionMatrix * modelViewMatrix * vPosition;
+			fColor = vColor;
+		}
+	</script>
+
+	<!-- Define the fragment shader -->
+	<script id="fragment-shader" type="x-shader/x-fragment">
+		precision mediump float;
+		varying vec4 fColor;
+
+		void main()
+		{
+			gl_FragColor = fColor;
+		}
+	</script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="panel">
+            <p>Gasket Properties</p>
+            <div>
+                <div class="color-pickers">
+                    <div class="color-picker">
+                        <label for="color1">Face 1</label>
+                        <input type="color" id="color1" value="#FF3366">
+                    </div>
+                    <div class="color-picker">
+                        <label for="color2">Face 2</label>
+                        <input type="color" id="color2" value="#00E5FF">
+                    </div>
+                    <div class="color-picker">
+                        <label for="color3">Face 3</label>
+                        <input type="color" id="color3" value="#333380">
+                    </div>
+                    <div class="color-picker">
+                        <label for="color4">Face 4</label>
+                        <input type="color" id="color4" value="#000000">
+                    </div>
+                </div>
+            </div>
+            <div class="slider">
+                No. of Subdivision
+                <div class="slider-container">
+                    1<input class="slide" id="subdiv-slider" type="range" min="1" max="5" value="3">5
+                    <div class="textbox">
+                        <p id="subdiv-text">3</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slider">
+                Animation Speed
+                <div class="slider-container">
+                    0.5<input class="slide" id="speed-slider" type="range" min="0.5" max="10" value="5" step="0.5">10
+                    <div class="textbox">
+                        <p id="speed-text">5.0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slider">
+                Maximum Scale
+                <div class="slider-container">
+                    1.0<input class="slide" id="scale-slider" type="range" min="1.0" max="4.0" value="2.0" step="0.1">4.0
+                    <div class="textbox">
+                        <p id="scale-text">2.0</p>
+                    </div>
+                </div>
+            </div>
+
+            <input id="anim-btn" type="button" value="Start Animation">
+        </div>
+        <div class="canvas">
+            <canvas id="gl-canvas" width="1280" height="720">
+                Error: your browser doesn't support the HTML5 canvas element
+            </canvas>
+        </div>
+    </div>
+    
+</body>
+
+</html>
