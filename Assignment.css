@@ -282,3 +282,40 @@ body {
         gap: 15px;
     }
 }
+
+/* Add these styles */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+    color: white;
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.checkbox-container label {
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* Add styles for when rotation slider is disabled */
+.slider.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Add smooth transition for showing/hiding rotation slider */
+#rotation-slider-container {
+    transition: opacity 0.3s ease;
+    opacity: 1;
+}
+
+#rotation-slider-container.hidden {
+    opacity: 0;
+    pointer-events: none;
+}

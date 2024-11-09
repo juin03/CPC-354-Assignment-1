@@ -98,6 +98,35 @@
                 </div>
             </div>
 
+            <div class="slider">
+                Bounce Duration (seconds)
+                <div class="slider-container">
+                    1.0<input class="slide" id="timer-slider" type="range" min="1.0" max="20.0" value="5.0" step="0.5">20.0
+                    <div class="textbox">
+                        <p id="timer-text">5.0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="checkbox-container">
+                <input type="checkbox" id="rotate-checkbox" checked>
+                <label for="rotate-checkbox">Enable X-Axis Rotation</label>
+            </div>
+
+            <div class="slider" id="rotation-slider-container">
+                Number of X-Axis Rotations
+                <div class="slider-container">
+                    1<input class="slide" id="rotation-slider" type="range" min="1" max="5" value="1" step="1">5
+                    <div class="textbox">
+                        <p id="rotation-text">1</p>
+                    </div>
+                </div>
+            </div>
+
+            
+
+            
+
             <input id="anim-btn" type="button" value="Start Animation">
         </div>
         <div class="canvas">

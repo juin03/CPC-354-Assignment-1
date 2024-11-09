@@ -115,6 +115,20 @@ function updateParticles(deltaTime) {
     }
 }
 
+// Add to variable declarations section
+var timerSlider, timerText;
+var bounceTimer = 5.0; // Default bounce time in seconds
+var bounceStartTime = 0;
+var isBouncing = false;
+
+// Add to variable declarations
+var rotateCheckbox;
+var shouldRotate = true;
+
+// Add to variable declarations
+var rotationSlider, rotationText;
+var numRotations = 1;
+
 
 /*-----------------------------------------------------------------------------------*/
 // WebGL Utilities
@@ -202,6 +216,38 @@ function getUIElement()
     // You might also want to add an input event for real-time updates
     scaleSlider.oninput = function(event) {
         scaleText.innerHTML = parseFloat(event.target.value).toFixed(1);
+    };
+
+    timerSlider = document.getElementById("timer-slider");
+    timerText = document.getElementById("timer-text");
+
+    timerSlider.onchange = function(event) {
+        bounceTimer = parseFloat(event.target.value);
+        timerText.innerHTML = bounceTimer.toFixed(1);
+    };
+
+    timerSlider.oninput = function(event) {
+        timerText.innerHTML = parseFloat(event.target.value).toFixed(1);
+    };
+
+    rotateCheckbox = document.getElementById("rotate-checkbox");
+    rotationSlider = document.getElementById("rotation-slider");
+    rotationText = document.getElementById("rotation-text");
+    const rotationContainer = document.getElementById("rotation-slider-container");
+
+    rotateCheckbox.onchange = function(event) {
+        shouldRotate = event.target.checked;
+        // Show/hide rotation slider based on checkbox
+        rotationContainer.style.display = shouldRotate ? "block" : "none";
+    };
+
+    rotationSlider.onchange = function(event) {
+        numRotations = parseInt(event.target.value);
+        rotationText.innerHTML = numRotations;
+    };
+
+    rotationSlider.oninput = function(event) {
+        rotationText.innerHTML = event.target.value;
     };
 }
 
@@ -305,6 +351,28 @@ function animUpdate() {
     modelViewMatrix = mat4();
     
     const speedFactor = animationSpeed / 5.0;
+    const currentTime = performance.now() / 1000; // Convert to seconds
+
+    // Initialize bounce start time when entering state 5
+    if (animationState === 5 && !isBouncing) {
+        bounceStartTime = currentTime;
+        isBouncing = true;
+    }
+
+    // Check if bounce time has expired
+    if (isBouncing && currentTime - bounceStartTime >= bounceTimer) {
+        // If rotation is enabled, go to state 6 (return to center)
+        // If rotation is disabled, go directly to ending
+        if (shouldRotate) {
+            animationState = 6;
+            isBouncing = false;
+            rotationAngle = 0;
+        } else {
+            // Go directly to smooth return without rotation
+            animationState = 6;
+            isBouncing = false;
+        }
+    }
 
     // State 0: Rotate right 180 degrees
     if (animationState === 0) {
@@ -348,30 +416,80 @@ function animUpdate() {
             bounceAngle = Math.random() * Math.PI * 2;
         }
     }
-    // State 5: Circular boundary movement
+    // Modified State 5: Circular boundary movement with timer
     else if (animationState === 5) {
         const moveSpeed = 0.03 * speedFactor;
         const nextX = moveX + Math.cos(bounceAngle) * moveSpeed;
         const nextY = moveY + Math.sin(bounceAngle) * moveSpeed;
         
-        // Check for collisions with rectangular boundaries
         if (Math.abs(nextX) > BOUNCE_WIDTH) {
             bounceAngle = Math.PI - bounceAngle;
-            bounceAngle += (Math.random() - 0.5) * 0.2; // Add small random variation
+            bounceAngle += (Math.random() - 0.5) * 0.2;
         }
         if (Math.abs(nextY) > BOUNCE_HEIGHT) {
             bounceAngle = -bounceAngle;
-            bounceAngle += (Math.random() - 0.5) * 0.2; // Add small random variation
+            bounceAngle += (Math.random() - 0.5) * 0.2;
         }
         
         moveX += Math.cos(bounceAngle) * moveSpeed;
         moveY += Math.sin(bounceAngle) * moveSpeed;
     }
+    // New State 6: Return to original position
+    else if (animationState === 6) {
+        const returnSpeed = 0.02 * speedFactor;
+        
+        moveX = moveX * (1 - returnSpeed);
+        moveY = moveY * (1 - returnSpeed);
+        scaleNum = 1 + (scaleNum - 1) * (1 - returnSpeed);
+
+        if (Math.abs(moveX) < 0.001 && 
+            Math.abs(moveY) < 0.001 && 
+            Math.abs(scaleNum - 1) < 0.001) {
+            moveX = 0;
+            moveY = 0;
+            scaleNum = 1;
+            
+            if (shouldRotate) {
+                rotationAngle = 0;
+                animationState = 7;  // Go to rotation state
+            } else {
+                // End animation if rotation is disabled
+                animationState = 0;
+                animFlag = false;
+                startBtn.value = "Start Animation";
+                startBtn.classList.remove('active');
+                render();
+                return;
+            }
+        }
+    }
+    // State 7: Perform X-axis rotation
+    else if (animationState === 7) {
+        const rotationSpeed = 2 * speedFactor;
+        rotationAngle += rotationSpeed;
+
+        // Apply rotation transform
+        modelViewMatrix = mult(modelViewMatrix, rotate(rotationAngle, 1, 0, 0));
+        
+        // Check against total degrees needed (360 * number of rotations)
+        if (rotationAngle >= 360 * numRotations) {
+            animationState = 0;
+            animFlag = false;
+            startBtn.value = "Start Animation";
+            startBtn.classList.remove('active');
+            render();
+            return;
+        }
+    }
 
     // Apply transformations
     modelViewMatrix = mult(modelViewMatrix, translate(moveX, moveY, 0));
     modelViewMatrix = mult(modelViewMatrix, scale(scaleNum, scaleNum, scaleNum));
-    modelViewMatrix = mult(modelViewMatrix, rotateZ(rotationAngle));
+    
+    // Apply Z rotation only for states 0-6
+    if (animationState <= 6) {
+        modelViewMatrix = mult(modelViewMatrix, rotateZ(rotationAngle));
+    }
     
     gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelViewMatrix));
     gl.drawArrays(gl.TRIANGLES, 0, points.length);
