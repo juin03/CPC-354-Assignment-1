@@ -71,6 +71,50 @@ const BOUNCE_HEIGHT = 1.0; // Height of bounce area
 var scaleSlider, scaleText;
 var maxScale = 2.0; // Default max scale value
 
+// Add to your global variables
+var particles = [];
+const MAX_PARTICLES = 100;
+const PARTICLE_LIFETIME = 1.0; // seconds
+const PARTICLE_SIZE = 3.0;
+
+// Add this new Particle class
+class Particle {
+    constructor(x, y, z) {
+        this.position = vec3(x, y, z);
+        this.lifetime = PARTICLE_LIFETIME;
+        this.alpha = 1.0;
+        this.color = vec4(1.0, 0.8, 0.4, 1.0); // Golden color
+        this.size = PARTICLE_SIZE;
+    }
+
+    update(deltaTime) {
+        this.lifetime -= deltaTime;
+        this.alpha = this.lifetime / PARTICLE_LIFETIME;
+        this.size *= 0.97; // Gradually reduce size
+    }
+
+    isDead() {
+        return this.lifetime <= 0;
+    }
+}
+
+// Add these functions to manage particles
+function createParticle(x, y, z) {
+    if (particles.length < MAX_PARTICLES) {
+        particles.push(new Particle(x, y, z));
+    }
+}
+
+function updateParticles(deltaTime) {
+    // Update existing particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update(deltaTime);
+        if (particles[i].isDead()) {
+            particles.splice(i, 1);
+        }
+    }
+}
+
 
 /*-----------------------------------------------------------------------------------*/
 // WebGL Utilities
