@@ -79,7 +79,7 @@ var isBouncing = false;
 
 // Add to variable declarations
 var XrotateCheckbox;
-var XshouldRotate = true;
+var XshouldRotate = false;
 
 // Add to variable declarations
 var XrotationSlider, XrotationText;
@@ -87,7 +87,7 @@ var XnumRotations = 1;
 
 // Add to variable declarations
 var YrotateCheckbox, ZrotateCheckbox;
-var YshouldRotate = true, ZshouldRotate = true;
+var YshouldRotate = false, ZshouldRotate = false;
 var YrotationSlider, ZrotationSlider;
 var YrotationText, ZrotationText;
 var YnumRotations = 1, ZnumRotations = 1;
