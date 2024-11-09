@@ -123,9 +123,35 @@
                 </div>
             </div>
 
-            
+            <div class="checkbox-container">
+                <input type="checkbox" id="rotate-y-checkbox" checked>
+                <label for="rotate-y-checkbox">Enable Y-Axis Rotation</label>
+            </div>
 
-            
+            <div class="slider" id="rotation-y-slider-container">
+                Number of Y-Axis Rotations
+                <div class="slider-container">
+                    1<input class="slide" id="rotation-y-slider" type="range" min="1" max="5" value="1" step="1">5
+                    <div class="textbox">
+                        <p id="rotation-y-text">1</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="checkbox-container">
+                <input type="checkbox" id="rotate-z-checkbox" checked>
+                <label for="rotate-z-checkbox">Enable Z-Axis Rotation</label>
+            </div>
+
+            <div class="slider" id="rotation-z-slider-container">
+                Number of Z-Axis Rotations
+                <div class="slider-container">
+                    1<input class="slide" id="rotation-z-slider" type="range" min="1" max="5" value="1" step="1">5
+                    <div class="textbox">
+                        <p id="rotation-z-text">1</p>
+                    </div>
+                </div>
+            </div>
 
             <input id="anim-btn" type="button" value="Start Animation">
         </div>

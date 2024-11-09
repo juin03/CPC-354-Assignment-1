@@ -71,50 +71,6 @@ const BOUNCE_HEIGHT = 1.0; // Height of bounce area
 var scaleSlider, scaleText;
 var maxScale = 2.0; // Default max scale value
 
-// Add to your global variables
-var particles = [];
-const MAX_PARTICLES = 100;
-const PARTICLE_LIFETIME = 1.0; // seconds
-const PARTICLE_SIZE = 3.0;
-
-// Add this new Particle class
-class Particle {
-    constructor(x, y, z) {
-        this.position = vec3(x, y, z);
-        this.lifetime = PARTICLE_LIFETIME;
-        this.alpha = 1.0;
-        this.color = vec4(1.0, 0.8, 0.4, 1.0); // Golden color
-        this.size = PARTICLE_SIZE;
-    }
-
-    update(deltaTime) {
-        this.lifetime -= deltaTime;
-        this.alpha = this.lifetime / PARTICLE_LIFETIME;
-        this.size *= 0.97; // Gradually reduce size
-    }
-
-    isDead() {
-        return this.lifetime <= 0;
-    }
-}
-
-// Add these functions to manage particles
-function createParticle(x, y, z) {
-    if (particles.length < MAX_PARTICLES) {
-        particles.push(new Particle(x, y, z));
-    }
-}
-
-function updateParticles(deltaTime) {
-    // Update existing particles
-    for (let i = particles.length - 1; i >= 0; i--) {
-        particles[i].update(deltaTime);
-        if (particles[i].isDead()) {
-            particles.splice(i, 1);
-        }
-    }
-}
-
 // Add to variable declarations section
 var timerSlider, timerText;
 var bounceTimer = 5.0; // Default bounce time in seconds
@@ -122,12 +78,23 @@ var bounceStartTime = 0;
 var isBouncing = false;
 
 // Add to variable declarations
-var rotateCheckbox;
-var shouldRotate = true;
+var XrotateCheckbox;
+var XshouldRotate = true;
 
 // Add to variable declarations
-var rotationSlider, rotationText;
-var numRotations = 1;
+var XrotationSlider, XrotationText;
+var XnumRotations = 1;
+
+// Add to variable declarations
+var YrotateCheckbox, ZrotateCheckbox;
+var YshouldRotate = true, ZshouldRotate = true;
+var YrotationSlider, ZrotationSlider;
+var YrotationText, ZrotationText;
+var YnumRotations = 1, ZnumRotations = 1;
+var YrotationAngle = 0, ZrotationAngle = 0;
+
+// Add to variable declarations
+var currentRotationAxis = 'X'; // Track which axis is currently rotating
 
 
 /*-----------------------------------------------------------------------------------*/
@@ -230,24 +197,62 @@ function getUIElement()
         timerText.innerHTML = parseFloat(event.target.value).toFixed(1);
     };
 
-    rotateCheckbox = document.getElementById("rotate-checkbox");
-    rotationSlider = document.getElementById("rotation-slider");
-    rotationText = document.getElementById("rotation-text");
+    XrotateCheckbox = document.getElementById("rotate-checkbox");
+    XrotationSlider = document.getElementById("rotation-slider");
+    XrotationText = document.getElementById("rotation-text");
     const rotationContainer = document.getElementById("rotation-slider-container");
 
-    rotateCheckbox.onchange = function(event) {
-        shouldRotate = event.target.checked;
+    XrotateCheckbox.onchange = function(event) {
+        XshouldRotate = event.target.checked;
         // Show/hide rotation slider based on checkbox
-        rotationContainer.style.display = shouldRotate ? "block" : "none";
+        rotationContainer.style.display = XshouldRotate ? "block" : "none";
     };
 
-    rotationSlider.onchange = function(event) {
-        numRotations = parseInt(event.target.value);
-        rotationText.innerHTML = numRotations;
+    XrotationSlider.onchange = function(event) {
+        XnumRotations = parseInt(event.target.value);
+        XrotationText.innerHTML = XnumRotations;
     };
 
-    rotationSlider.oninput = function(event) {
-        rotationText.innerHTML = event.target.value;
+    XrotationSlider.oninput = function(event) {
+        XrotationText.innerHTML = event.target.value;
+    };
+
+    // Add Y and Z rotation controls
+    YrotateCheckbox = document.getElementById("rotate-y-checkbox");
+    ZrotateCheckbox = document.getElementById("rotate-z-checkbox");
+    YrotationSlider = document.getElementById("rotation-y-slider");
+    ZrotationSlider = document.getElementById("rotation-z-slider");
+    YrotationText = document.getElementById("rotation-y-text");
+    ZrotationText = document.getElementById("rotation-z-text");
+    const rotationYContainer = document.getElementById("rotation-y-slider-container");
+    const rotationZContainer = document.getElementById("rotation-z-slider-container");
+
+    YrotateCheckbox.onchange = function(event) {
+        YshouldRotate = event.target.checked;
+        rotationYContainer.style.display = YshouldRotate ? "block" : "none";
+    };
+
+    ZrotateCheckbox.onchange = function(event) {
+        ZshouldRotate = event.target.checked;
+        rotationZContainer.style.display = ZshouldRotate ? "block" : "none";
+    };
+
+    YrotationSlider.onchange = function(event) {
+        YnumRotations = parseInt(event.target.value);
+        YrotationText.innerHTML = YnumRotations;
+    };
+
+    ZrotationSlider.onchange = function(event) {
+        ZnumRotations = parseInt(event.target.value);
+        ZrotationText.innerHTML = ZnumRotations;
+    };
+
+    YrotationSlider.oninput = function(event) {
+        YrotationText.innerHTML = event.target.value;
+    };
+
+    ZrotationSlider.oninput = function(event) {
+        ZrotationText.innerHTML = event.target.value;
     };
 }
 
@@ -342,6 +347,8 @@ function recompute()
     divideTetra(vertices[0], vertices[1], vertices[2], vertices[3], subdivide);
     configWebGL();
     render();
+
+    currentRotationAxis = 'X';
 }
 
 // Update the animation frame
@@ -361,12 +368,13 @@ function animUpdate() {
 
     // Check if bounce time has expired
     if (isBouncing && currentTime - bounceStartTime >= bounceTimer) {
-        // If rotation is enabled, go to state 6 (return to center)
-        // If rotation is disabled, go directly to ending
-        if (shouldRotate) {
+        // If any rotation is enabled, go to state 6 (return to center)
+        if (XshouldRotate || YshouldRotate || ZshouldRotate) {
             animationState = 6;
             isBouncing = false;
             rotationAngle = 0;
+            YrotationAngle = 0;
+            ZrotationAngle = 0;
         } else {
             // Go directly to smooth return without rotation
             animationState = 6;
@@ -449,11 +457,14 @@ function animUpdate() {
             moveY = 0;
             scaleNum = 1;
             
-            if (shouldRotate) {
+            // Check if any rotation is enabled
+            if (XshouldRotate || YshouldRotate || ZshouldRotate) {
                 rotationAngle = 0;
+                YrotationAngle = 0;
+                ZrotationAngle = 0;
                 animationState = 7;  // Go to rotation state
             } else {
-                // End animation if rotation is disabled
+                // End animation if no rotation is enabled
                 animationState = 0;
                 animFlag = false;
                 startBtn.value = "Start Animation";
@@ -466,19 +477,70 @@ function animUpdate() {
     // State 7: Perform X-axis rotation
     else if (animationState === 7) {
         const rotationSpeed = 2 * speedFactor;
-        rotationAngle += rotationSpeed;
+        let isCurrentRotationComplete = false;
 
-        // Apply rotation transform
-        modelViewMatrix = mult(modelViewMatrix, rotate(rotationAngle, 1, 0, 0));
-        
-        // Check against total degrees needed (360 * number of rotations)
-        if (rotationAngle >= 360 * numRotations) {
-            animationState = 0;
-            animFlag = false;
-            startBtn.value = "Start Animation";
-            startBtn.classList.remove('active');
-            render();
-            return;
+        // Handle X axis rotation first
+        if (currentRotationAxis === 'X') {
+            if (XshouldRotate) {
+                rotationAngle += rotationSpeed;
+                if (rotationAngle >= 360 * XnumRotations) {
+                    isCurrentRotationComplete = true;
+                    rotationAngle = 360 * XnumRotations;
+                }
+                modelViewMatrix = mult(modelViewMatrix, rotate(rotationAngle, 1, 0, 0));
+            } else {
+                isCurrentRotationComplete = true;
+            }
+
+            if (isCurrentRotationComplete) {
+                currentRotationAxis = 'Y';
+                rotationAngle = 0;
+            }
+        }
+        // Then handle Y axis rotation
+        else if (currentRotationAxis === 'Y') {
+            if (YshouldRotate) {
+                YrotationAngle += rotationSpeed;
+                if (YrotationAngle >= 360 * YnumRotations) {
+                    isCurrentRotationComplete = true;
+                    YrotationAngle = 360 * YnumRotations;
+                }
+                modelViewMatrix = mult(modelViewMatrix, rotate(YrotationAngle, 0, 1, 0));
+            } else {
+                isCurrentRotationComplete = true;
+            }
+
+            if (isCurrentRotationComplete) {
+                currentRotationAxis = 'Z';
+                YrotationAngle = 0;
+            }
+        }
+        // Finally handle Z axis rotation
+        else if (currentRotationAxis === 'Z') {
+            if (ZshouldRotate) {
+                ZrotationAngle += rotationSpeed;
+                if (ZrotationAngle >= 360 * ZnumRotations) {
+                    isCurrentRotationComplete = true;
+                    ZrotationAngle = 360 * ZnumRotations;
+                }
+                modelViewMatrix = mult(modelViewMatrix, rotate(ZrotationAngle, 0, 0, 1));
+            } else {
+                isCurrentRotationComplete = true;
+            }
+
+            if (isCurrentRotationComplete) {
+                // All rotations are complete
+                animationState = 0;
+                animFlag = false;
+                currentRotationAxis = 'X'; // Reset for next animation
+                rotationAngle = 0;
+                YrotationAngle = 0;
+                ZrotationAngle = 0;
+                startBtn.value = "Start Animation";
+                startBtn.classList.remove('active');
+                render();
+                return;
+            }
         }
     }
 
