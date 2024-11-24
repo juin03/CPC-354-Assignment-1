@@ -68,33 +68,50 @@ const BOUNCE_WIDTH = 2.5;  // Width of bounce area
 const BOUNCE_HEIGHT = 1.0; // Height of bounce area
 
 // Add to variable declarations section
-var scaleSlider, scaleText;
-var maxScale = 2.0; // Default max scale value
-
-// Add to variable declarations section
 var timerSlider, timerText;
 var bounceTimer = 5.0; // Default bounce time in seconds
 var bounceStartTime = 0;
 var isBouncing = false;
 
 // Add to variable declarations
-var XrotateCheckbox;
-var XshouldRotate = false;
-
-// Add to variable declarations
 var XrotationSlider, XrotationText;
 var XnumRotations = 1;
 
 // Add to variable declarations
-var YrotateCheckbox, ZrotateCheckbox;
-var YshouldRotate = false, ZshouldRotate = false;
 var YrotationSlider, ZrotationSlider;
-var YrotationText, ZrotationText;
-var YnumRotations = 1, ZnumRotations = 1;
 var YrotationAngle = 0, ZrotationAngle = 0;
 
-// Add to variable declarations
-var currentRotationAxis = 'X'; // Track which axis is currently rotating
+// Add to existing variable declarations
+let animationSequence = [];
+let currentSequenceIndex = 0;
+const defaultSequence = [
+    'right180',
+    'left180',
+    'left180',
+    'right180',
+    'enlarge',
+    'bounce',
+    'center',
+    'rotateX',
+    'rotateY',
+    'rotateZ'
+];
+
+// Add these variables to track final states after animations
+var finalRotationZ = 0;  // Tracks the final Z rotation after right/left 180
+
+// Add to your variable declarations
+var backgroundCheckbox;
+var showBackground = false;
+
+// Add to your variable declarations
+var musicCheckbox;
+var enableMusic = false;
+var backgroundMusic;
+
+// Add these variables to your variable declarations
+var backgroundFile, musicFile;
+var customBackgroundImage, customBackgroundMusic;
 
 
 /*-----------------------------------------------------------------------------------*/
@@ -110,6 +127,7 @@ window.onload = function init()
     // WebGL setups
     getUIElement();
     configWebGL();
+    initSequenceBuilder();
     render();
 }
 
@@ -122,6 +140,8 @@ function getUIElement()
     startBtn = document.getElementById("anim-btn");
     speedSlider = document.getElementById("speed-slider");
     speedText = document.getElementById("speed-text");
+    timerSlider = document.getElementById("timer-slider");
+    timerText = document.getElementById("timer-text");
 
     // Add color picker elements
     colorPickers = [
@@ -140,54 +160,24 @@ function getUIElement()
         });
     });
 
+    // Speed slider handler
     speedSlider.onchange = function(event) {
         animationSpeed = parseFloat(event.target.value);
         speedText.innerHTML = animationSpeed.toFixed(1);
-        recompute();
     };
 
-    startBtn.onclick = function() {
-        animFlag = !animFlag;
-        if(animFlag) {
-            startBtn.value = "Stop Animation";
-            startBtn.classList.add('active');
-            animUpdate();
-        } else {
-            startBtn.value = "Start Animation";
-            startBtn.classList.remove('active');
-            window.cancelAnimationFrame(animFrame);
-        }
-    };
-
-    // Add subdivision slider handler
+    // Subdivision slider handlers
     subdivSlider.onchange = function(event) {
         subdivide = parseInt(event.target.value);
         subdivText.innerHTML = subdivide;
         recompute();
     };
 
-    // You might also want to add an input event for real-time updates
     subdivSlider.oninput = function(event) {
         subdivText.innerHTML = event.target.value;
     };
 
-    scaleSlider = document.getElementById("scale-slider");
-    scaleText = document.getElementById("scale-text");
-
-    scaleSlider.onchange = function(event) {
-        maxScale = parseFloat(event.target.value);
-        scaleText.innerHTML = maxScale.toFixed(1);
-        recompute();
-    };
-
-    // You might also want to add an input event for real-time updates
-    scaleSlider.oninput = function(event) {
-        scaleText.innerHTML = parseFloat(event.target.value).toFixed(1);
-    };
-
-    timerSlider = document.getElementById("timer-slider");
-    timerText = document.getElementById("timer-text");
-
+    // Timer slider handlers
     timerSlider.onchange = function(event) {
         bounceTimer = parseFloat(event.target.value);
         timerText.innerHTML = bounceTimer.toFixed(1);
@@ -197,62 +187,117 @@ function getUIElement()
         timerText.innerHTML = parseFloat(event.target.value).toFixed(1);
     };
 
-    XrotateCheckbox = document.getElementById("rotate-checkbox");
-    XrotationSlider = document.getElementById("rotation-slider");
-    XrotationText = document.getElementById("rotation-text");
-    const rotationContainer = document.getElementById("rotation-slider-container");
-
-    XrotateCheckbox.onchange = function(event) {
-        XshouldRotate = event.target.checked;
-        // Show/hide rotation slider based on checkbox
-        rotationContainer.style.display = XshouldRotate ? "block" : "none";
+    // Start/Stop button handler
+    startBtn.onclick = function() {
+        animFlag = !animFlag;
+        if(animFlag) {
+            startBtn.value = "Stop Animation";
+            startBtn.classList.add('active');
+            currentSequenceIndex = 0;
+            resetAnimationState();
+            
+            if (enableMusic) {
+                if (!backgroundMusic) {
+                    initAudio();
+                }
+                backgroundMusic.play();
+            }
+            
+            animUpdate();
+        } else {
+            startBtn.value = "Start Animation";
+            startBtn.classList.remove('active');
+            
+            if (backgroundMusic) {
+                backgroundMusic.pause();
+                backgroundMusic.currentTime = 0;
+            }
+            
+            window.cancelAnimationFrame(animFrame);
+        }
     };
 
-    XrotationSlider.onchange = function(event) {
-        XnumRotations = parseInt(event.target.value);
-        XrotationText.innerHTML = XnumRotations;
+    // Background and music checkboxes
+    backgroundCheckbox = document.getElementById("background-checkbox");
+    backgroundCheckbox.onchange = function(event) {
+        showBackground = event.target.checked;
+        const canvas = document.getElementById("gl-canvas");
+        if (showBackground) {
+            canvas.style.backgroundImage = `url(${customBackgroundImage.src})`;
+            canvas.classList.add('show-background');
+        } else {
+            canvas.style.backgroundImage = 'none';  // This will remove the background image
+            canvas.classList.remove('show-background');
+        }
     };
 
-    XrotationSlider.oninput = function(event) {
-        XrotationText.innerHTML = event.target.value;
+    musicCheckbox = document.getElementById("music-checkbox");
+    musicCheckbox.onchange = function(event) {
+        enableMusic = event.target.checked;
+        if (!enableMusic && backgroundMusic) {
+            backgroundMusic.pause();
+            backgroundMusic.currentTime = 0;
+        }
     };
 
-    // Add Y and Z rotation controls
-    YrotateCheckbox = document.getElementById("rotate-y-checkbox");
-    ZrotateCheckbox = document.getElementById("rotate-z-checkbox");
-    YrotationSlider = document.getElementById("rotation-y-slider");
-    ZrotationSlider = document.getElementById("rotation-z-slider");
-    YrotationText = document.getElementById("rotation-y-text");
-    ZrotationText = document.getElementById("rotation-z-text");
-    const rotationYContainer = document.getElementById("rotation-y-slider-container");
-    const rotationZContainer = document.getElementById("rotation-z-slider-container");
+    // File upload handlers
+    backgroundFile = document.getElementById("background-file");
+    musicFile = document.getElementById("music-file");
 
-    YrotateCheckbox.onchange = function(event) {
-        YshouldRotate = event.target.checked;
-        rotationYContainer.style.display = YshouldRotate ? "block" : "none";
+    backgroundFile.onchange = function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            if (file.type !== 'image/png') {
+                alert('Please select a PNG image file.');
+                event.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                customBackgroundImage = new Image();
+                customBackgroundImage.onload = function() {
+                    // Enable the checkbox once image is loaded
+                    backgroundCheckbox.disabled = false;
+                    backgroundCheckbox.checked = true;
+                    showBackground = true;
+                    const canvas = document.getElementById("gl-canvas");
+                    canvas.style.backgroundImage = `url(${e.target.result})`;
+                    canvas.classList.add('show-background');
+                };
+                customBackgroundImage.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
-    ZrotateCheckbox.onchange = function(event) {
-        ZshouldRotate = event.target.checked;
-        rotationZContainer.style.display = ZshouldRotate ? "block" : "none";
-    };
+    musicFile.onchange = function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            if (file.type !== 'audio/mpeg') {
+                alert('Please select an MP3 audio file.');
+                event.target.value = '';
+                return;
+            }
 
-    YrotationSlider.onchange = function(event) {
-        YnumRotations = parseInt(event.target.value);
-        YrotationText.innerHTML = YnumRotations;
-    };
-
-    ZrotationSlider.onchange = function(event) {
-        ZnumRotations = parseInt(event.target.value);
-        ZrotationText.innerHTML = ZnumRotations;
-    };
-
-    YrotationSlider.oninput = function(event) {
-        YrotationText.innerHTML = event.target.value;
-    };
-
-    ZrotationSlider.oninput = function(event) {
-        ZrotationText.innerHTML = event.target.value;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (backgroundMusic) {
+                    backgroundMusic.pause();
+                    backgroundMusic.src = '';
+                }
+                
+                backgroundMusic = new Audio();
+                backgroundMusic.src = e.target.result;
+                backgroundMusic.loop = true;
+                
+                // Enable the checkbox once music is loaded
+                musicCheckbox.disabled = false;
+                musicCheckbox.checked = true;
+                enableMusic = true;
+            };
+            reader.readAsDataURL(file);
+        }
     };
 }
 
@@ -260,7 +305,10 @@ function getUIElement()
 function configWebGL()
 {
     // Initialize the WebGL context
-    gl = WebGLUtils.setupWebGL(canvas);
+    gl = WebGLUtils.setupWebGL(canvas, {
+        alpha: true,  // Enable alpha channel
+        premultipliedAlpha: false  // Handle alpha properly
+    });
     
     if(!gl)
     {
@@ -269,7 +317,7 @@ function configWebGL()
 
     // Set the viewport and clear the color
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(1.0, 1.0, 1.0, 1.0);
+    gl.clearColor(0.0, 0.0, 0.0, 0.0);  // Transparent background
 
     // Enable hidden-surface removal
     gl.enable(gl.DEPTH_TEST);
@@ -332,6 +380,7 @@ function recompute()
     colors = [];
     theta = [0, 0, 0];
     scaleNum = 1;
+    targetScale = 1;
     scaleSign = 1;
     animFlag = false;
     
@@ -354,213 +403,192 @@ function recompute()
 // Update the animation frame
 function animUpdate() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    
     modelViewMatrix = mat4();
     
     const speedFactor = animationSpeed / 5.0;
-    const currentTime = performance.now() / 1000; // Convert to seconds
+    const currentTime = performance.now() / 1000;
+    
+    // Get current animation action
+    const currentAction = animationSequence[currentSequenceIndex];
+    let isActionComplete = false;
 
-    // Initialize bounce start time when entering state 5
-    if (animationState === 5 && !isBouncing) {
-        bounceStartTime = currentTime;
-        isBouncing = true;
-    }
+    // Apply any persistent rotations first
+    modelViewMatrix = mult(modelViewMatrix, rotateZ(finalRotationZ));
 
-    // Check if bounce time has expired
-    if (isBouncing && currentTime - bounceStartTime >= bounceTimer) {
-        // If any rotation is enabled, go to state 6 (return to center)
-        if (XshouldRotate || YshouldRotate || ZshouldRotate) {
-            animationState = 6;
-            isBouncing = false;
-            rotationAngle = 0;
-            YrotationAngle = 0;
-            ZrotationAngle = 0;
-        } else {
-            // Go directly to smooth return without rotation
-            animationState = 6;
-            isBouncing = false;
-        }
-    }
+    switch (currentAction) {
+        case 'right180':
+            rotationAngle += 2 * speedFactor;
+            if (rotationAngle >= 180) {
+                rotationAngle = 180;
+                finalRotationZ = (finalRotationZ + 180) % 360; // Store the final rotation
+                isActionComplete = true;
+            }
+            modelViewMatrix = mult(modelViewMatrix, rotateZ(rotationAngle));
+            break;
 
-    // State 0: Rotate right 180 degrees
-    if (animationState === 0) {
-        rotationAngle += 2 * speedFactor;
-        if (rotationAngle >= 180) {
-            animationState = 1;
-            rotationAngle = 180;
-        }
-    }
-    // State 1: Rotate back to center from right
-    else if (animationState === 1) {
-        rotationAngle -= 2 * speedFactor;
-        if (rotationAngle <= 0) {
-            animationState = 2;
-            rotationAngle = 0;
-        }
-    }
-    // State 2: Rotate left 180 degrees
-    else if (animationState === 2) {
-        rotationAngle -= 2 * speedFactor;
-        if (rotationAngle <= -180) {
-            animationState = 3;
-            rotationAngle = -180;
-        }
-    }
-    // State 3: Rotate back to center from left
-    else if (animationState === 3) {
-        rotationAngle += 2 * speedFactor;
-        if (rotationAngle >= 0) {
-            animationState = 4;
-            rotationAngle = 0;
-            scaleNum = 1;
-        }
-    }
-    // State 4: Scale up
-    else if (animationState === 4) {
-        scaleNum += 0.02 * speedFactor;
-        if (scaleNum >= maxScale) {
-            animationState = 5;
-            scaleNum = maxScale;
-            bounceAngle = Math.random() * Math.PI * 2;
-        }
-    }
-    // Modified State 5: Circular boundary movement with timer
-    else if (animationState === 5) {
-        const moveSpeed = 0.03 * speedFactor;
-        const nextX = moveX + Math.cos(bounceAngle) * moveSpeed;
-        const nextY = moveY + Math.sin(bounceAngle) * moveSpeed;
-        
-        if (Math.abs(nextX) > BOUNCE_WIDTH) {
-            bounceAngle = Math.PI - bounceAngle;
-            bounceAngle += (Math.random() - 0.5) * 0.2;
-        }
-        if (Math.abs(nextY) > BOUNCE_HEIGHT) {
-            bounceAngle = -bounceAngle;
-            bounceAngle += (Math.random() - 0.5) * 0.2;
-        }
-        
-        moveX += Math.cos(bounceAngle) * moveSpeed;
-        moveY += Math.sin(bounceAngle) * moveSpeed;
-    }
-    // New State 6: Return to original position
-    else if (animationState === 6) {
-        const returnSpeed = 0.02 * speedFactor;
-        
-        moveX = moveX * (1 - returnSpeed);
-        moveY = moveY * (1 - returnSpeed);
-        scaleNum = 1 + (scaleNum - 1) * (1 - returnSpeed);
+        case 'left180':
+            rotationAngle -= 2 * speedFactor;
+            if (rotationAngle <= -180) {
+                rotationAngle = -180;
+                finalRotationZ = (finalRotationZ - 180) % 360; // Store the final rotation
+                isActionComplete = true;
+            }
+            modelViewMatrix = mult(modelViewMatrix, rotateZ(rotationAngle));
+            break;
 
-        if (Math.abs(moveX) < 0.001 && 
-            Math.abs(moveY) < 0.001 && 
-            Math.abs(scaleNum - 1) < 0.001) {
-            moveX = 0;
-            moveY = 0;
-            scaleNum = 1;
+        case 'center':
+            const returnSpeed = 0.02 * speedFactor;
+            moveX *= (1 - returnSpeed);
+            moveY *= (1 - returnSpeed);
+            rotationAngle *= (1 - returnSpeed);
+            finalRotationZ *= (1 - returnSpeed); // Gradually reset the stored rotation
+            scaleNum = 1 + (scaleNum - 1) * (1 - returnSpeed);
+
+            if (Math.abs(moveX) < 0.001 && 
+                Math.abs(moveY) < 0.001 && 
+                Math.abs(rotationAngle) < 0.001 && 
+                Math.abs(finalRotationZ) < 0.001 && 
+                Math.abs(scaleNum - 1) < 0.001) {
+                moveX = 0;
+                moveY = 0;
+                rotationAngle = 0;
+                finalRotationZ = 0;
+                scaleNum = 1;
+                isActionComplete = true;
+            }
+            break;
+
+        case 'enlarge':
+            scaleNum += 0.02 * speedFactor;
+            if (scaleNum >= (targetScale + 1.0)) {
+                scaleNum = targetScale + 1.0;
+                targetScale = scaleNum;
+                isActionComplete = true;
+            }
+            break;
+
+        case 'shrink':
+            scaleNum -= 0.02 * speedFactor;
+            if (scaleNum <= 1) {
+                scaleNum = 1;
+                isActionComplete = true;
+            }
+            break;
+
+        case 'bounce':
+            if (!isBouncing) {
+                bounceStartTime = currentTime;
+                isBouncing = true;
+            }
+
+            const moveSpeed = 0.03 * speedFactor;
+            const nextX = moveX + Math.cos(bounceAngle) * moveSpeed;
+            const nextY = moveY + Math.sin(bounceAngle) * moveSpeed;
             
-            // Check if any rotation is enabled
-            if (XshouldRotate || YshouldRotate || ZshouldRotate) {
+            if (Math.abs(nextX) > BOUNCE_WIDTH) {
+                bounceAngle = Math.PI - bounceAngle;
+                bounceAngle += (Math.random() - 0.5) * 0.2;
+            }
+            if (Math.abs(nextY) > BOUNCE_HEIGHT) {
+                bounceAngle = -bounceAngle;
+                bounceAngle += (Math.random() - 0.5) * 0.2;
+            }
+            
+            moveX += Math.cos(bounceAngle) * moveSpeed;
+            moveY += Math.sin(bounceAngle) * moveSpeed;
+
+            if (currentTime - bounceStartTime >= bounceTimer) {
+                isBouncing = false;
+                isActionComplete = true;
+            }
+            break;
+
+        case 'rotateX':
+            rotationAngle += 2 * speedFactor;
+            modelViewMatrix = mult(modelViewMatrix, rotate(rotationAngle, 1, 0, 0));
+            if (rotationAngle >= 360) {
                 rotationAngle = 0;
+                isActionComplete = true;
+            }
+            break;
+
+        case 'rotateY':
+            YrotationAngle += 2 * speedFactor;
+            modelViewMatrix = mult(modelViewMatrix, rotate(YrotationAngle, 0, 1, 0));
+            if (YrotationAngle >= 360) {
                 YrotationAngle = 0;
+                isActionComplete = true;
+            }
+            break;
+
+        case 'rotateZ':
+            ZrotationAngle += 2 * speedFactor;
+            modelViewMatrix = mult(modelViewMatrix, rotate(ZrotationAngle, 0, 0, 1));
+            if (ZrotationAngle >= 360) {
                 ZrotationAngle = 0;
-                animationState = 7;  // Go to rotation state
-            } else {
-                // End animation if no rotation is enabled
-                animationState = 0;
-                animFlag = false;
-                startBtn.value = "Start Animation";
-                startBtn.classList.remove('active');
-                render();
-                return;
+                isActionComplete = true;
             }
-        }
-    }
-    // State 7: Perform X-axis rotation
-    else if (animationState === 7) {
-        const rotationSpeed = 2 * speedFactor;
-        let isCurrentRotationComplete = false;
-
-        // Handle X axis rotation first
-        if (currentRotationAxis === 'X') {
-            if (XshouldRotate) {
-                rotationAngle += rotationSpeed;
-                if (rotationAngle >= 360 * XnumRotations) {
-                    isCurrentRotationComplete = true;
-                    rotationAngle = 360 * XnumRotations;
-                }
-                modelViewMatrix = mult(modelViewMatrix, rotate(rotationAngle, 1, 0, 0));
-            } else {
-                isCurrentRotationComplete = true;
-            }
-
-            if (isCurrentRotationComplete) {
-                currentRotationAxis = 'Y';
-                rotationAngle = 0;
-            }
-        }
-        // Then handle Y axis rotation
-        else if (currentRotationAxis === 'Y') {
-            if (YshouldRotate) {
-                YrotationAngle += rotationSpeed;
-                if (YrotationAngle >= 360 * YnumRotations) {
-                    isCurrentRotationComplete = true;
-                    YrotationAngle = 360 * YnumRotations;
-                }
-                modelViewMatrix = mult(modelViewMatrix, rotate(YrotationAngle, 0, 1, 0));
-            } else {
-                isCurrentRotationComplete = true;
-            }
-
-            if (isCurrentRotationComplete) {
-                currentRotationAxis = 'Z';
-                YrotationAngle = 0;
-            }
-        }
-        // Finally handle Z axis rotation
-        else if (currentRotationAxis === 'Z') {
-            if (ZshouldRotate) {
-                ZrotationAngle += rotationSpeed;
-                if (ZrotationAngle >= 360 * ZnumRotations) {
-                    isCurrentRotationComplete = true;
-                    ZrotationAngle = 360 * ZnumRotations;
-                }
-                modelViewMatrix = mult(modelViewMatrix, rotate(ZrotationAngle, 0, 0, 1));
-            } else {
-                isCurrentRotationComplete = true;
-            }
-
-            if (isCurrentRotationComplete) {
-                // All rotations are complete
-                animationState = 0;
-                animFlag = false;
-                currentRotationAxis = 'X'; // Reset for next animation
-                rotationAngle = 0;
-                YrotationAngle = 0;
-                ZrotationAngle = 0;
-                startBtn.value = "Start Animation";
-                startBtn.classList.remove('active');
-                render();
-                return;
-            }
-        }
+            break;
     }
 
-    // Apply transformations
+    // Apply common transformations
     modelViewMatrix = mult(modelViewMatrix, translate(moveX, moveY, 0));
     modelViewMatrix = mult(modelViewMatrix, scale(scaleNum, scaleNum, scaleNum));
     
-    // Apply Z rotation only for states 0-6
-    if (animationState <= 6) {
-        modelViewMatrix = mult(modelViewMatrix, rotateZ(rotationAngle));
-    }
-    
     gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelViewMatrix));
     gl.drawArrays(gl.TRIANGLES, 0, points.length);
+
+    // Handle sequence progression
+    if (isActionComplete) {
+        currentSequenceIndex++;
+        if (currentSequenceIndex >= animationSequence.length) {
+            // Animation sequence complete - just stop the animation without resetting
+            currentSequenceIndex = 0;
+            animFlag = false;
+            startBtn.value = "Start Animation";
+            startBtn.classList.remove('active');
+            
+            // Only stop the music if it's playing
+            if (backgroundMusic) {
+                backgroundMusic.pause();
+                backgroundMusic.currentTime = 0;
+            }
+            
+            return;  // Keep the final state by removing resetAnimationState() and render()
+        }
+        resetActionState();  // Only reset temporary action-specific states
+    }
 
     if (animFlag) {
         animFrame = window.requestAnimationFrame(animUpdate);
     }
 }
 
+// Add these helper functions
+function resetAnimationState() {
+    moveX = 0;
+    moveY = 0;
+    rotationAngle = 0;
+    finalRotationZ = 0;
+    YrotationAngle = 0;
+    ZrotationAngle = 0;
+    scaleNum = 1;
+    targetScale = 1;
+    isBouncing = false;
+    currentSequenceIndex = 0;
+    
+    if (backgroundMusic) {
+        backgroundMusic.pause();
+        backgroundMusic.currentTime = 0;
+    }
+}
+
+function resetActionState() {
+    rotationAngle = 0;
+    YrotationAngle = 0;
+    ZrotationAngle = 0;
+    isBouncing = false;
+}
 
 /*-----------------------------------------------------------------------------------*/
 // 3D Sierpinski Gasket
@@ -629,3 +657,78 @@ function hexToRgba(hex) {
     const b = parseInt(hex.slice(5, 7), 16) / 255;
     return vec4(r, g, b, 1.0);
 }
+
+// Add these functions after your existing variable declarations
+function initSequenceBuilder() {
+    const sequenceContainer = document.getElementById('animation-sequence');
+    const clearBtn = document.getElementById('clear-sequence');
+    const resetBtn = document.getElementById('reset-default');
+    
+    // Add click handlers for action buttons
+    document.querySelectorAll('.action-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            addToSequence(this.dataset.action);
+        });
+    });
+    
+    clearBtn.addEventListener('click', clearSequence);
+    resetBtn.addEventListener('click', resetToDefault);
+    
+    // Initialize with default sequence
+    resetToDefault();
+}
+
+function addToSequence(action) {
+    animationSequence.push(action);
+    updateSequenceDisplay();
+}
+
+function removeFromSequence(index) {
+    animationSequence.splice(index, 1);
+    updateSequenceDisplay();
+}
+
+function clearSequence() {
+    animationSequence = [];
+    updateSequenceDisplay();
+}
+
+function resetToDefault() {
+    animationSequence = [...defaultSequence];
+    updateSequenceDisplay();
+}
+
+function updateSequenceDisplay() {
+    const container = document.getElementById('animation-sequence');
+    container.innerHTML = '';
+    
+    animationSequence.forEach((action, index) => {
+        const item = document.createElement('div');
+        item.className = 'sequence-item';
+        item.innerHTML = `
+            ${action}
+            <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
+        `;
+        container.appendChild(item);
+    });
+}
+
+// Modify initAudio to work with uploaded music
+function initAudio() {
+    if (!backgroundMusic) {
+        backgroundMusic = new Audio();
+        backgroundMusic.loop = true;
+    }
+}
+
+// Add this function to clean up resources
+function cleanup() {
+    if (backgroundMusic) {
+        backgroundMusic.pause();
+        backgroundMusic.src = '';
+    }
+    const canvas = document.getElementById("gl-canvas");
+    canvas.style.backgroundImage = '';
+    canvas.classList.remove('show-background');
+}
+

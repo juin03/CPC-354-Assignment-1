@@ -47,27 +47,54 @@
 <body>
     <div class="container">
         <div class="panel">
-            <p>Gasket Properties</p>
-            <div>
-                <div class="color-pickers">
-                    <div class="color-picker">
-                        <label for="color1">Face 1</label>
-                        <input type="color" id="color1" value="#FF3366">
+            <p>Animation Sequence</p>
+            <div class="sequence-builder">
+                <div class="available-actions">
+                    <p>Available Actions</p>
+                    <div class="action-buttons">
+                        <button class="action-btn" data-action="right180">Right 180°</button>
+                        <button class="action-btn" data-action="left180">Left 180°</button>
+                        <button class="action-btn" data-action="enlarge">Enlarge</button>
+                        <button class="action-btn" data-action="shrink">Shrink</button>
+                        <button class="action-btn" data-action="bounce">Bounce</button>
+                        <button class="action-btn" data-action="rotateX">Rotate X</button>
+                        <button class="action-btn" data-action="rotateY">Rotate Y</button>
+                        <button class="action-btn" data-action="rotateZ">Rotate Z</button>
                     </div>
-                    <div class="color-picker">
-                        <label for="color2">Face 2</label>
-                        <input type="color" id="color2" value="#00E5FF">
+                </div>
+                
+                <div class="sequence-container">
+                    <p>Current Sequence</p>
+                    <div id="animation-sequence" class="animation-sequence">
+                        <!-- Sequence items will be added here dynamically -->
                     </div>
-                    <div class="color-picker">
-                        <label for="color3">Face 3</label>
-                        <input type="color" id="color3" value="#333380">
-                    </div>
-                    <div class="color-picker">
-                        <label for="color4">Face 4</label>
-                        <input type="color" id="color4" value="#000000">
+                    <div class="sequence-controls">
+                        <button id="clear-sequence">Clear Sequence</button>
+                        <button id="reset-default">Reset to Default</button>
                     </div>
                 </div>
             </div>
+
+            <p>Gasket Properties</p>
+            <div class="color-pickers">
+                <div class="color-picker">
+                    <label for="color1">Face 1</label>
+                    <input type="color" id="color1" value="#FF3366">
+                </div>
+                <div class="color-picker">
+                    <label for="color2">Face 2</label>
+                    <input type="color" id="color2" value="#00E5FF">
+                </div>
+                <div class="color-picker">
+                    <label for="color3">Face 3</label>
+                    <input type="color" id="color3" value="#333380">
+                </div>
+                <div class="color-picker">
+                    <label for="color4">Face 4</label>
+                    <input type="color" id="color4" value="#000000">
+                </div>
+            </div>
+
             <div class="slider">
                 No. of Subdivision
                 <div class="slider-container">
@@ -89,16 +116,6 @@
             </div>
 
             <div class="slider">
-                Maximum Scale
-                <div class="slider-container">
-                    1.0<input class="slide" id="scale-slider" type="range" min="1.0" max="4.0" value="2.0" step="0.1">4.0
-                    <div class="textbox">
-                        <p id="scale-text">2.0</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="slider">
                 Bounce Duration (seconds)
                 <div class="slider-container">
                     1.0<input class="slide" id="timer-slider" type="range" min="1.0" max="20.0" value="5.0" step="0.5">20.0
@@ -107,55 +124,28 @@
                     </div>
                 </div>
             </div>
+
             <p>Additional Properties</p>
+            <div class="additional-properties">
+                <div class="file-upload-container">
+                    <label for="background-file">Background Image (PNG):</label>
+                    <input type="file" id="background-file" accept=".png">
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="background-checkbox" disabled>
+                        <label for="background-checkbox">Show Background</label>
+                    </div>
+                </div>
 
-           <div class="additional-properties">
-            <div class="checkbox-container">
-                <input type="checkbox" id="rotate-checkbox">
-                <label for="rotate-checkbox">Enable X-Axis Rotation</label>
-            </div>
-
-            <div class="slider" id="rotation-slider-container" style="display: none;">
-                Number of X-Axis Rotations
-                <div class="slider-container">
-                    1<input class="slide" id="rotation-slider" type="range" min="1" max="5" value="1" step="1">5
-                    <div class="textbox">
-                        <p id="rotation-text">1</p>
+                <div class="file-upload-container">
+                    <label for="music-file">Background Music (MP3):</label>
+                    <input type="file" id="music-file" accept=".mp3">
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="music-checkbox" disabled>
+                        <label for="music-checkbox">Enable Music</label>
                     </div>
                 </div>
             </div>
 
-            <div class="checkbox-container">
-                <input type="checkbox" id="rotate-y-checkbox">
-                <label for="rotate-y-checkbox">Enable Y-Axis Rotation</label>
-            </div>
-
-            <div class="slider" id="rotation-y-slider-container" style="display: none;">
-                Number of Y-Axis Rotations
-                <div class="slider-container">
-                    1<input class="slide" id="rotation-y-slider" type="range" min="1" max="5" value="1" step="1">5
-                    <div class="textbox">
-                        <p id="rotation-y-text">1</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="checkbox-container">
-                <input type="checkbox" id="rotate-z-checkbox">
-                <label for="rotate-z-checkbox">Enable Z-Axis Rotation</label>
-            </div>
-
-            <div class="slider" id="rotation-z-slider-container" style="display: none;">
-                Number of Z-Axis Rotations
-                <div class="slider-container">
-                    1<input class="slide" id="rotation-z-slider" type="range" min="1" max="5" value="1" step="1">5
-                    <div class="textbox">
-                        <p id="rotation-z-text">1</p>
-                    </div>
-                </div>
-            </div>
-
-           </div>
             <input id="anim-btn" type="button" value="Start Animation">
         </div>
         <div class="canvas">
