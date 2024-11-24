@@ -68,35 +68,42 @@ body {
 }
 
 .color-pickers {
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    gap: 18px;
-    padding: 10px 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    margin-bottom: 25px;
 }
 
 .color-picker {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    transition: transform 0.2s;
+}
+
+.color-picker:hover {
+    transform: translateY(-3px);
 }
 
 .color-picker label {
-    color: white;
-    font-weight: bold;
-    font-size: 14px;
+    color: #ffffff;
+    font-size: 16px;
+    margin-bottom: 8px;
 }
 
 .color-picker input[type="color"] {
-    width: 50px;
-    height: 50px;
-    border: 2px solid white;
-    border-radius: 5px;
-    background: none;
+    width: 65px;
+    height: 65px;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     cursor: pointer;
-    padding: 0;
 }
 
 .color-picker input[type="color"]::-webkit-color-swatch-wrapper {
@@ -274,24 +281,55 @@ body {
     }
 }
 
-/* Add these styles */
+/* Checkbox Enhancement */
 .checkbox-container {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin: 10px 0;
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin: 10px 0;
-    color: white;
+    gap: 12px;
 }
 
 .checkbox-container input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #0077b6;
+    border-radius: 6px;
+    position: relative;
     cursor: pointer;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.checkbox-container input[type="checkbox"]:checked {
+    background: #0077b6;
+}
+
+.checkbox-container input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    color: white;
+    font-size: 16px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 .checkbox-container label {
-    font-size: 16px;
-    cursor: pointer;
+    color: #ffffff;
+    font-size: 15px;
+}
+
+/* Disabled state styling */
+input[type="checkbox"]:disabled {
+    border-color: #555;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+input[type="checkbox"]:disabled + label {
+    color: #888;
 }
 
 /* Add padding to last element before button to prevent overlap */
@@ -473,18 +511,32 @@ body {
 
 /* Add these styles */
 .file-upload-container {
-    margin: 10px 0;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 20px;
+    border-radius: 12px;
+    margin: 15px 0;
 }
 
 .file-upload-container label {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 12px;
     display: block;
-    margin-bottom: 5px;
 }
 
 .file-upload-container input[type="file"] {
-    width: 100%;
-    padding: 5px;
-    margin-bottom: 5px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px;
+    border-radius: 8px;
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    width: calc(100% - 34px);
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.file-upload-container input[type="file"]:hover {
+    border-color: #0077b6;
 }
 
 /* Style for disabled checkboxes */
