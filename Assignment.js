@@ -85,16 +85,14 @@ var YrotationAngle = 0, ZrotationAngle = 0;
 let animationSequence = [];
 let currentSequenceIndex = 0;
 const defaultSequence = [
-    'right180',
-    'left180',
-    'left180',
-    'right180',
+    {type: 'rotate', axis: 'Z', degrees: 180},
+    {type: 'rotate', axis: 'Z', degrees: -180},
+    {type: 'rotate', axis: 'Z', degrees: -180},
+    {type: 'rotate', axis: 'Z', degrees: 180},
+    'shrink',
     'enlarge',
     'bounce',
-    'center',
-    {type: 'rotate', axis: 'X', degrees: 360},
-    {type: 'rotate', axis: 'Y', degrees: 360},
-    {type: 'rotate', axis: 'Z', degrees: 360}
+    'center'
 ];
 
 // Add these variables to track final states after animations
@@ -112,19 +110,6 @@ var backgroundMusic;
 // Add these variables to your variable declarations
 var backgroundFile, musicFile;
 var customBackgroundImage, customBackgroundMusic;
-
-// Add these variables after other state variables
-var cumulativeRotation = {
-    X: 0,
-    Y: 0,
-    Z: 0
-};
-
-var rotationStartAngle = {
-    X: 0,
-    Y: 0,
-    Z: 0
-};
 
 
 /*-----------------------------------------------------------------------------------*/
@@ -430,66 +415,56 @@ function animUpdate() {
 
     // Handle the action based on its type
     if (typeof currentAction === 'object' && currentAction.type === 'rotate') {
+        // Handle rotation actions
         const rotationSpeed = 2 * speedFactor;
-        const axis = currentAction.axis;
+        const targetDegrees = currentAction.degrees;
+        const rotationDirection = targetDegrees >= 0 ? 1 : -1;
         
-        // Initialize start angle when beginning a new rotation
-        if (rotationAngle === 0) {
-            rotationStartAngle[axis] = cumulativeRotation[axis];
-        }
-        
-        rotationAngle += rotationSpeed;
-        cumulativeRotation[axis] = rotationStartAngle[axis] + rotationAngle;
-        
-        // Apply all cumulative rotations
-        modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.X, 1, 0, 0));
-        modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Y, 0, 1, 0));
-        modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Z, 0, 0, 1));
-        
-        if (rotationAngle >= currentAction.degrees) {
-            rotationAngle = 0;
-            isActionComplete = true;
+        switch (currentAction.axis) {
+            case 'X':
+                rotationAngle += rotationSpeed * rotationDirection;
+                modelViewMatrix = mult(modelViewMatrix, rotate(rotationAngle, 1, 0, 0));
+                if (Math.abs(rotationAngle) >= Math.abs(targetDegrees)) {
+                    rotationAngle = 0;
+                    isActionComplete = true;
+                }
+                break;
+            case 'Y':
+                YrotationAngle += rotationSpeed * rotationDirection;
+                modelViewMatrix = mult(modelViewMatrix, rotate(YrotationAngle, 0, 1, 0));
+                if (Math.abs(YrotationAngle) >= Math.abs(targetDegrees)) {
+                    YrotationAngle = 0;
+                    isActionComplete = true;
+                }
+                break;
+            case 'Z':
+                ZrotationAngle += rotationSpeed * rotationDirection;
+                modelViewMatrix = mult(modelViewMatrix, rotate(ZrotationAngle, 0, 0, 1));
+                if (Math.abs(ZrotationAngle) >= Math.abs(targetDegrees)) {
+                    ZrotationAngle = 0;
+                    isActionComplete = true;
+                    if (currentAction.degrees === 180 || currentAction.degrees === -180) {
+                        finalRotationZ += currentAction.degrees;  // Accumulate the rotation
+                    }
+                }
+                break;
         }
     } else {
-        // Handle other actions (keep your existing switch case for non-rotation actions)
         switch (currentAction) {
-            case 'right180':
-                rotationAngle += 2 * speedFactor;
-                if (rotationAngle >= 180) {
-                    rotationAngle = 180;
-                    finalRotationZ = (finalRotationZ + 180) % 360; // Store the final rotation
-                    isActionComplete = true;
-                }
-                modelViewMatrix = mult(modelViewMatrix, rotateZ(rotationAngle));
-                break;
-
-            case 'left180':
-                rotationAngle -= 2 * speedFactor;
-                if (rotationAngle <= -180) {
-                    rotationAngle = -180;
-                    finalRotationZ = (finalRotationZ - 180) % 360; // Store the final rotation
-                    isActionComplete = true;
-                }
-                modelViewMatrix = mult(modelViewMatrix, rotateZ(rotationAngle));
-                break;
-
             case 'center':
                 const returnSpeed = 0.02 * speedFactor;
                 moveX *= (1 - returnSpeed);
                 moveY *= (1 - returnSpeed);
                 rotationAngle *= (1 - returnSpeed);
-                finalRotationZ *= (1 - returnSpeed); // Gradually reset the stored rotation
                 scaleNum = 1 + (scaleNum - 1) * (1 - returnSpeed);
 
                 if (Math.abs(moveX) < 0.001 && 
                     Math.abs(moveY) < 0.001 && 
                     Math.abs(rotationAngle) < 0.001 && 
-                    Math.abs(finalRotationZ) < 0.001 && 
                     Math.abs(scaleNum - 1) < 0.001) {
                     moveX = 0;
                     moveY = 0;
                     rotationAngle = 0;
-                    finalRotationZ = 0;
                     scaleNum = 1;
                     isActionComplete = true;
                 }
@@ -579,13 +554,14 @@ function animUpdate() {
 function resetAnimationState() {
     moveX = 0;
     moveY = 0;
+    rotationAngle = 0;
+    finalRotationZ = 0;
+    YrotationAngle = 0;
+    ZrotationAngle = 0;
     scaleNum = 1;
     targetScale = 1;
     isBouncing = false;
     currentSequenceIndex = 0;
-    rotationAngle = 0;
-    cumulativeRotation = { X: 0, Y: 0, Z: 0 };
-    rotationStartAngle = { X: 0, Y: 0, Z: 0 };
     
     if (backgroundMusic) {
         backgroundMusic.pause();
@@ -595,6 +571,8 @@ function resetAnimationState() {
 
 function resetActionState() {
     rotationAngle = 0;
+    YrotationAngle = 0;
+    ZrotationAngle = 0;
     isBouncing = false;
 }
 
@@ -726,7 +704,7 @@ function updateSequenceDisplay() {
             item.innerHTML = `
                 Rotate ${action.axis}: 
                 <input type="number" class="rotation-value" value="${action.degrees}" 
-                       min="0" max="360" step="90"
+                       min="-360" max="360" step="90"
                        onchange="updateRotationValue(${index}, this.value)">°
                 <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
             `;
