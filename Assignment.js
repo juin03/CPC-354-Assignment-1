@@ -92,9 +92,9 @@ const defaultSequence = [
     'enlarge',
     'bounce',
     'center',
-    'rotateX',
-    'rotateY',
-    'rotateZ'
+    {type: 'rotate', axis: 'X', degrees: 360},
+    {type: 'rotate', axis: 'Y', degrees: 360},
+    {type: 'rotate', axis: 'Z', degrees: 360}
 ];
 
 // Add these variables to track final states after animations
@@ -112,6 +112,19 @@ var backgroundMusic;
 // Add these variables to your variable declarations
 var backgroundFile, musicFile;
 var customBackgroundImage, customBackgroundMusic;
+
+// Add these variables after other state variables
+var cumulativeRotation = {
+    X: 0,
+    Y: 0,
+    Z: 0
+};
+
+var rotationStartAngle = {
+    X: 0,
+    Y: 0,
+    Z: 0
+};
 
 
 /*-----------------------------------------------------------------------------------*/
@@ -415,120 +428,118 @@ function animUpdate() {
     // Apply any persistent rotations first
     modelViewMatrix = mult(modelViewMatrix, rotateZ(finalRotationZ));
 
-    switch (currentAction) {
-        case 'right180':
-            rotationAngle += 2 * speedFactor;
-            if (rotationAngle >= 180) {
-                rotationAngle = 180;
-                finalRotationZ = (finalRotationZ + 180) % 360; // Store the final rotation
-                isActionComplete = true;
-            }
-            modelViewMatrix = mult(modelViewMatrix, rotateZ(rotationAngle));
-            break;
+    // Handle the action based on its type
+    if (typeof currentAction === 'object' && currentAction.type === 'rotate') {
+        const rotationSpeed = 2 * speedFactor;
+        const axis = currentAction.axis;
+        
+        // Initialize start angle when beginning a new rotation
+        if (rotationAngle === 0) {
+            rotationStartAngle[axis] = cumulativeRotation[axis];
+        }
+        
+        rotationAngle += rotationSpeed;
+        cumulativeRotation[axis] = rotationStartAngle[axis] + rotationAngle;
+        
+        // Apply all cumulative rotations
+        modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.X, 1, 0, 0));
+        modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Y, 0, 1, 0));
+        modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Z, 0, 0, 1));
+        
+        if (rotationAngle >= currentAction.degrees) {
+            rotationAngle = 0;
+            isActionComplete = true;
+        }
+    } else {
+        // Handle other actions (keep your existing switch case for non-rotation actions)
+        switch (currentAction) {
+            case 'right180':
+                rotationAngle += 2 * speedFactor;
+                if (rotationAngle >= 180) {
+                    rotationAngle = 180;
+                    finalRotationZ = (finalRotationZ + 180) % 360; // Store the final rotation
+                    isActionComplete = true;
+                }
+                modelViewMatrix = mult(modelViewMatrix, rotateZ(rotationAngle));
+                break;
 
-        case 'left180':
-            rotationAngle -= 2 * speedFactor;
-            if (rotationAngle <= -180) {
-                rotationAngle = -180;
-                finalRotationZ = (finalRotationZ - 180) % 360; // Store the final rotation
-                isActionComplete = true;
-            }
-            modelViewMatrix = mult(modelViewMatrix, rotateZ(rotationAngle));
-            break;
+            case 'left180':
+                rotationAngle -= 2 * speedFactor;
+                if (rotationAngle <= -180) {
+                    rotationAngle = -180;
+                    finalRotationZ = (finalRotationZ - 180) % 360; // Store the final rotation
+                    isActionComplete = true;
+                }
+                modelViewMatrix = mult(modelViewMatrix, rotateZ(rotationAngle));
+                break;
 
-        case 'center':
-            const returnSpeed = 0.02 * speedFactor;
-            moveX *= (1 - returnSpeed);
-            moveY *= (1 - returnSpeed);
-            rotationAngle *= (1 - returnSpeed);
-            finalRotationZ *= (1 - returnSpeed); // Gradually reset the stored rotation
-            scaleNum = 1 + (scaleNum - 1) * (1 - returnSpeed);
+            case 'center':
+                const returnSpeed = 0.02 * speedFactor;
+                moveX *= (1 - returnSpeed);
+                moveY *= (1 - returnSpeed);
+                rotationAngle *= (1 - returnSpeed);
+                finalRotationZ *= (1 - returnSpeed); // Gradually reset the stored rotation
+                scaleNum = 1 + (scaleNum - 1) * (1 - returnSpeed);
 
-            if (Math.abs(moveX) < 0.001 && 
-                Math.abs(moveY) < 0.001 && 
-                Math.abs(rotationAngle) < 0.001 && 
-                Math.abs(finalRotationZ) < 0.001 && 
-                Math.abs(scaleNum - 1) < 0.001) {
-                moveX = 0;
-                moveY = 0;
-                rotationAngle = 0;
-                finalRotationZ = 0;
-                scaleNum = 1;
-                isActionComplete = true;
-            }
-            break;
+                if (Math.abs(moveX) < 0.001 && 
+                    Math.abs(moveY) < 0.001 && 
+                    Math.abs(rotationAngle) < 0.001 && 
+                    Math.abs(finalRotationZ) < 0.001 && 
+                    Math.abs(scaleNum - 1) < 0.001) {
+                    moveX = 0;
+                    moveY = 0;
+                    rotationAngle = 0;
+                    finalRotationZ = 0;
+                    scaleNum = 1;
+                    isActionComplete = true;
+                }
+                break;
 
-        case 'enlarge':
-            scaleNum += 0.02 * speedFactor;
-            if (scaleNum >= (targetScale + 1.0)) {
-                scaleNum = targetScale + 1.0;
-                targetScale = scaleNum;
-                isActionComplete = true;
-            }
-            break;
+            case 'enlarge':
+                scaleNum += 0.02 * speedFactor;
+                if (scaleNum >= (targetScale + 1.0)) {
+                    scaleNum = targetScale + 1.0;
+                    targetScale = scaleNum;
+                    isActionComplete = true;
+                }
+                break;
 
-        case 'shrink':
-            scaleNum -= 0.02 * speedFactor;
-            if (scaleNum <= 1) {
-                scaleNum = 1;
-                isActionComplete = true;
-            }
-            break;
+            case 'shrink':
+                scaleNum -= 0.02 * speedFactor;
+                if (scaleNum <= 1) {
+                    scaleNum = 1;
+                    isActionComplete = true;
+                }
+                break;
 
-        case 'bounce':
-            if (!isBouncing) {
-                bounceStartTime = currentTime;
-                isBouncing = true;
-            }
+            case 'bounce':
+                if (!isBouncing) {
+                    bounceStartTime = currentTime;
+                    isBouncing = true;
+                }
 
-            const moveSpeed = 0.03 * speedFactor;
-            const nextX = moveX + Math.cos(bounceAngle) * moveSpeed;
-            const nextY = moveY + Math.sin(bounceAngle) * moveSpeed;
-            
-            if (Math.abs(nextX) > BOUNCE_WIDTH) {
-                bounceAngle = Math.PI - bounceAngle;
-                bounceAngle += (Math.random() - 0.5) * 0.2;
-            }
-            if (Math.abs(nextY) > BOUNCE_HEIGHT) {
-                bounceAngle = -bounceAngle;
-                bounceAngle += (Math.random() - 0.5) * 0.2;
-            }
-            
-            moveX += Math.cos(bounceAngle) * moveSpeed;
-            moveY += Math.sin(bounceAngle) * moveSpeed;
+                const moveSpeed = 0.03 * speedFactor;
+                const nextX = moveX + Math.cos(bounceAngle) * moveSpeed;
+                const nextY = moveY + Math.sin(bounceAngle) * moveSpeed;
+                
+                if (Math.abs(nextX) > BOUNCE_WIDTH) {
+                    bounceAngle = Math.PI - bounceAngle;
+                    bounceAngle += (Math.random() - 0.5) * 0.2;
+                }
+                if (Math.abs(nextY) > BOUNCE_HEIGHT) {
+                    bounceAngle = -bounceAngle;
+                    bounceAngle += (Math.random() - 0.5) * 0.2;
+                }
+                
+                moveX += Math.cos(bounceAngle) * moveSpeed;
+                moveY += Math.sin(bounceAngle) * moveSpeed;
 
-            if (currentTime - bounceStartTime >= bounceTimer) {
-                isBouncing = false;
-                isActionComplete = true;
-            }
-            break;
-
-        case 'rotateX':
-            rotationAngle += 2 * speedFactor;
-            modelViewMatrix = mult(modelViewMatrix, rotate(rotationAngle, 1, 0, 0));
-            if (rotationAngle >= 360) {
-                rotationAngle = 0;
-                isActionComplete = true;
-            }
-            break;
-
-        case 'rotateY':
-            YrotationAngle += 2 * speedFactor;
-            modelViewMatrix = mult(modelViewMatrix, rotate(YrotationAngle, 0, 1, 0));
-            if (YrotationAngle >= 360) {
-                YrotationAngle = 0;
-                isActionComplete = true;
-            }
-            break;
-
-        case 'rotateZ':
-            ZrotationAngle += 2 * speedFactor;
-            modelViewMatrix = mult(modelViewMatrix, rotate(ZrotationAngle, 0, 0, 1));
-            if (ZrotationAngle >= 360) {
-                ZrotationAngle = 0;
-                isActionComplete = true;
-            }
-            break;
+                if (currentTime - bounceStartTime >= bounceTimer) {
+                    isBouncing = false;
+                    isActionComplete = true;
+                }
+                break;
+        }
     }
 
     // Apply common transformations
@@ -568,14 +579,13 @@ function animUpdate() {
 function resetAnimationState() {
     moveX = 0;
     moveY = 0;
-    rotationAngle = 0;
-    finalRotationZ = 0;
-    YrotationAngle = 0;
-    ZrotationAngle = 0;
     scaleNum = 1;
     targetScale = 1;
     isBouncing = false;
     currentSequenceIndex = 0;
+    rotationAngle = 0;
+    cumulativeRotation = { X: 0, Y: 0, Z: 0 };
+    rotationStartAngle = { X: 0, Y: 0, Z: 0 };
     
     if (backgroundMusic) {
         backgroundMusic.pause();
@@ -585,8 +595,6 @@ function resetAnimationState() {
 
 function resetActionState() {
     rotationAngle = 0;
-    YrotationAngle = 0;
-    ZrotationAngle = 0;
     isBouncing = false;
 }
 
@@ -679,7 +687,15 @@ function initSequenceBuilder() {
 }
 
 function addToSequence(action) {
-    animationSequence.push(action);
+    if (action.startsWith('rotate')) {
+        animationSequence.push({
+            type: 'rotate',
+            axis: action.slice(-1),
+            degrees: 360  // Default value
+        });
+    } else {
+        animationSequence.push(action);
+    }
     updateSequenceDisplay();
 }
 
@@ -705,10 +721,21 @@ function updateSequenceDisplay() {
     animationSequence.forEach((action, index) => {
         const item = document.createElement('div');
         item.className = 'sequence-item';
-        item.innerHTML = `
-            ${action}
-            <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
-        `;
+        
+        if (typeof action === 'object' && action.type === 'rotate') {
+            item.innerHTML = `
+                Rotate ${action.axis}: 
+                <input type="number" class="rotation-value" value="${action.degrees}" 
+                       min="0" max="360" step="90"
+                       onchange="updateRotationValue(${index}, this.value)">°
+                <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
+            `;
+        } else {
+            item.innerHTML = `
+                ${action}
+                <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
+            `;
+        }
         container.appendChild(item);
     });
 }
@@ -730,5 +757,13 @@ function cleanup() {
     const canvas = document.getElementById("gl-canvas");
     canvas.style.backgroundImage = '';
     canvas.classList.remove('show-background');
+}
+
+// Update the updateRotationValue function
+function updateRotationValue(index, value) {
+    const degrees = parseInt(value) || 360;
+    if (typeof animationSequence[index] === 'object' && animationSequence[index].type === 'rotate') {
+        animationSequence[index].degrees = degrees;
+    }
 }
 
