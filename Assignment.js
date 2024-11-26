@@ -117,6 +117,10 @@ var cumulativeRotation = {
     Z: 0
 };
 
+// Add to your variable declarations at the top
+var randomColorsCheckbox;
+var enableRandomColors = false;
+
 
 /*-----------------------------------------------------------------------------------*/
 // WebGL Utilities
@@ -302,6 +306,12 @@ function getUIElement()
             };
             reader.readAsDataURL(file);
         }
+    };
+
+    // Add random colors checkbox handler
+    randomColorsCheckbox = document.getElementById("random-colors-checkbox");
+    randomColorsCheckbox.onchange = function(event) {
+        enableRandomColors = event.target.checked;
     };
 }
 
@@ -497,27 +507,35 @@ function animUpdate() {
                 if (!isBouncing) {
                     bounceStartTime = currentTime;
                     isBouncing = true;
+                    bounceTimer = currentAction.duration;
                 }
 
                 const moveSpeed = 0.03 * speedFactor;
                 const nextX = moveX + Math.cos(bounceAngle) * moveSpeed;
                 const nextY = moveY + Math.sin(bounceAngle) * moveSpeed;
                 
+                // Check for collisions and update colors
+                let collision = false;
                 if (Math.abs(nextX) > BOUNCE_WIDTH) {
                     bounceAngle = Math.PI - bounceAngle;
                     bounceAngle += (Math.random() - 0.5) * 0.2;
+                    collision = true;
                 }
                 if (Math.abs(nextY) > BOUNCE_HEIGHT) {
                     bounceAngle = -bounceAngle;
                     bounceAngle += (Math.random() - 0.5) * 0.2;
+                    collision = true;
+                }
+                
+                // Only update colors if random colors are enabled
+                if (collision && enableRandomColors) {
+                    updateRandomColors();
                 }
                 
                 moveX += Math.cos(bounceAngle) * moveSpeed;
                 moveY += Math.sin(bounceAngle) * moveSpeed;
 
-                // Use the duration from the action object
-                const bounceDuration = currentAction.duration || 5.0;
-                if (currentTime - bounceStartTime >= bounceDuration) {
+                if (currentTime - bounceStartTime >= bounceTimer) {
                     isBouncing = false;
                     isActionComplete = true;
                 }
@@ -682,12 +700,7 @@ function addToSequence(action) {
     } else if (action === 'scale') {
         animationSequence.push({
             type: 'scale',
-            scale: 1.0
-        });
-    } else if (action === 'bounce') {
-        animationSequence.push({
-            type: 'bounce',
-            duration: 5.0  // Default duration
+            scale: 1.0  // Default to current scale
         });
     } else {
         animationSequence.push(action);
@@ -723,7 +736,7 @@ function updateSequenceDisplay() {
                 item.innerHTML = `
                     Rotate ${action.axis}: 
                     <input type="number" class="rotation-value" value="${action.degrees}" 
-                           min="-360" max="360" step="45"
+                           min="-360" max="360" step="90"
                            onchange="updateRotationValue(${index}, this.value)">°
                     <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
                 `;
@@ -733,14 +746,6 @@ function updateSequenceDisplay() {
                     <input type="number" class="scale-value" value="${action.scale}" 
                            min="0.1" max="5" step="0.1"
                            onchange="updateScaleValue(${index}, this.value)">×
-                    <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
-                `;
-            } else if (action.type === 'bounce') {
-                item.innerHTML = `
-                    Bounce for: 
-                    <input type="number" class="bounce-value" value="${action.duration}" 
-                           min="1" max="20" step="0.5"
-                           onchange="updateBounceValue(${index}, this.value)">s
                     <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
                 `;
             }
@@ -790,12 +795,32 @@ function updateScaleValue(index, value) {
     }
 }
 
-// Add this new function for handling bounce duration updates
-function updateBounceValue(index, value) {
-    const duration = parseFloat(value) || 5.0;
-    if (typeof animationSequence[index] === 'object' && 
-        animationSequence[index].type === 'bounce') {
-        animationSequence[index].duration = duration;
+// Add this helper function to generate random colors
+function getRandomColor() {
+    return vec4(
+        Math.random(),  // R
+        Math.random(),  // G
+        Math.random(),  // B
+        1.0            // A
+    );
+}
+
+// Add this function to update colors and recompute the gasket
+function updateRandomColors() {
+    // Update each face with a random color
+    for (let i = 0; i < currentColors.length; i++) {
+        currentColors[i] = getRandomColor();
+        // Update the color picker UI to reflect the new color
+        colorPickers[i].value = rgbaToHex(currentColors[i]);
     }
+    
+    // Recompute the gasket with new colors
+    points = [];
+    colors = [];
+    divideTetra(vertices[0], vertices[1], vertices[2], vertices[3], subdivide);
+    
+    // Update the buffer data
+    gl.bindBuffer(gl.ARRAY_BUFFER, colBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW);
 }
 
