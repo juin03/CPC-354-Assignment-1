@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
+  <head>
+    <meta charset="utf-8" />
     <title>CPC354 Assignement 1</title>
 
     <!-- Link CSS, JS, and WebGL -->
@@ -9,157 +9,170 @@
     <script type="text/javascript" src="Common/initShaders.js"></script>
     <script type="text/javascript" src="Common/MV.js"></script>
     <script type="text/javascript" src="Assignment.js"></script>
-    <link rel="stylesheet" type="text/css" href="Assignment.css">
+    <link rel="stylesheet" type="text/css" href="Assignment.css" />
 
+    <!-- Define the vertex shader -->
+    <script id="vertex-shader" type="x-shader/x-vertex">
+      // Declare the global variable(s) for draw calls
+      uniform mat4 projectionMatrix;
+      uniform mat4 modelViewMatrix;
 
-	<!-- Define the vertex shader -->
-	<script id="vertex-shader" type="x-shader/x-vertex">
-		// Declare the global variable(s) for draw calls
-		uniform mat4 projectionMatrix;
-		uniform mat4 modelViewMatrix;
-		
-		// Declare the input variable(s) to receive per-vertex data from the application
-		attribute vec4 vPosition;
-		attribute vec4 vColor;
-		
-		// Declare the varying variable(s) to pass data to the fragment shader
-		varying vec4 fColor;
+      // Declare the input variable(s) to receive per-vertex data from the application
+      attribute vec4 vPosition;
+      attribute vec4 vColor;
 
-		void main()
-		{
-			gl_Position = projectionMatrix * modelViewMatrix * vPosition;
-			fColor = vColor;
-		}
-	</script>
+      // Declare the varying variable(s) to pass data to the fragment shader
+      varying vec4 fColor;
 
-	<!-- Define the fragment shader -->
-	<script id="fragment-shader" type="x-shader/x-fragment">
-		precision mediump float;
-		varying vec4 fColor;
+      void main()
+      {
+      	gl_Position = projectionMatrix * modelViewMatrix * vPosition;
+      	fColor = vColor;
+      }
+    </script>
 
-		void main()
-		{
-			gl_FragColor = fColor;
-		}
-	</script>
-</head>
+    <!-- Define the fragment shader -->
+    <script id="fragment-shader" type="x-shader/x-fragment">
+      precision mediump float;
+      varying vec4 fColor;
 
-<body>
+      void main()
+      {
+      	gl_FragColor = fColor;
+      }
+    </script>
+  </head>
+
+  <body>
     <div class="container">
-        <div class="panel">
-            <p>Animation Sequence</p>
-            <div class="sequence-builder">
-                <div class="available-actions">
-                    <p>Available Actions</p>
-                    <div class="action-buttons">
-                        <button class="action-btn" data-action="rotateX">Rotate X</button>
-                        <button class="action-btn" data-action="rotateY">Rotate Y</button>
-                        <button class="action-btn" data-action="rotateZ">Rotate Z</button>
-                        <button class="action-btn" data-action="center">Center </button>
-                        <button class="action-btn" data-action="bounce">Bounce</button>
-                        <button class="action-btn" data-action="scale">Scale</button>
-                    </div>
-                </div>
-                
-                <div class="sequence-container">
-                    <p>Current Sequence</p>
-                    <div id="animation-sequence" class="animation-sequence">
-                        <!-- Sequence items will be added here dynamically -->
-                    </div>
-                    <div class="sequence-controls">
-                        <button id="clear-sequence">Clear Sequence</button>
-                        <button id="reset-default">Reset to Default</button>
-                    </div>
-                </div>
+      <div class="panel">
+        <p>Animation Sequence</p>
+        <div class="sequence-builder">
+          <div class="available-actions">
+            <p>Available Actions</p>
+            <div class="action-buttons">
+              <button class="action-btn" data-action="rotateX">Rotate X</button>
+              <button class="action-btn" data-action="rotateY">Rotate Y</button>
+              <button class="action-btn" data-action="rotateZ">Rotate Z</button>
+              <button class="action-btn" data-action="center">Center</button>
+              <button class="action-btn" data-action="bounce">Bounce</button>
+              <button class="action-btn" data-action="scale">Scale</button>
             </div>
+          </div>
 
-            <p>Gasket Properties</p>
-            <div class="color-pickers">
-                <div class="color-picker">
-                    <label for="color1">Face 1</label>
-                    <input type="color" id="color1" value="#FF3366">
-                </div>
-                <div class="color-picker">
-                    <label for="color2">Face 2</label>
-                    <input type="color" id="color2" value="#00E5FF">
-                </div>
-                <div class="color-picker">
-                    <label for="color3">Face 3</label>
-                    <input type="color" id="color3" value="#333380">
-                </div>
-                <div class="color-picker">
-                    <label for="color4">Face 4</label>
-                    <input type="color" id="color4" value="#000000">
-                </div>
+          <div class="sequence-container">
+            <p>Current Sequence</p>
+            <div id="animation-sequence" class="animation-sequence">
+              <!-- Sequence items will be added here dynamically -->
             </div>
-
-            <div class="slider">
-                No. of Subdivision
-                <div class="slider-container">
-                    1<input class="slide" id="subdiv-slider" type="range" min="1" max="5" value="3">5
-                    <div class="textbox">
-                        <p id="subdiv-text">3</p>
-                    </div>
-                </div>
+            <div class="sequence-controls">
+              <button id="clear-sequence">Clear Sequence</button>
+              <button id="reset-default">Reset to Default</button>
             </div>
-
-            <div class="slider">
-                Animation Speed
-                <div class="slider-container">
-                    0.5<input class="slide" id="speed-slider" type="range" min="0.5" max="10" value="5" step="0.5">10
-                    <div class="textbox">
-                        <p id="speed-text">5.0</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="slider">
-                Bounce Duration (seconds)
-                <div class="slider-container">
-                    1.0<input class="slide" id="timer-slider" type="range" min="1.0" max="20.0" value="5.0" step="0.5">20.0
-                    <div class="textbox">
-                        <p id="timer-text">5.0</p>
-                    </div>
-                </div>
-            </div>
-
-            <p>Additional Properties</p>
-            <div class="additional-properties">
-                <div class="file-upload-container">
-                    <label for="background-file">Background Image (PNG):</label>
-                    <input type="file" id="background-file" accept=".png">
-                    <div class="checkbox-container">
-                        <input type="checkbox" id="background-checkbox" disabled>
-                        <label for="background-checkbox">Show Background</label>
-                    </div>
-                </div>
-
-                <div class="file-upload-container">
-                    <label for="music-file">Background Music (MP3):</label>
-                    <input type="file" id="music-file" accept=".mp3">
-                    <div class="checkbox-container">
-                        <input type="checkbox" id="music-checkbox" disabled>
-                        <label for="music-checkbox">Enable Music</label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="message-input-container">
-                <label for="message-input">Display Message:</label>
-                <input type="text" id="message-input" placeholder="Enter your message here..." maxlength="50">
-            </div>
-
-            <input id="anim-btn" type="button" value="Start Animation">
+          </div>
         </div>
-        <div class="canvas">
-            
-            <canvas id="gl-canvas" width="1280" height="720">
-                Error: your browser doesn't support the HTML5 canvas element
-            </canvas>
-            <div id="message-display" class="message-display"></div>
+
+        <p>Gasket Properties</p>
+        <div class="color-pickers">
+          <div class="color-picker">
+            <label for="color1">Face 1</label>
+            <input type="color" id="color1" value="#FF3366" />
+          </div>
+          <div class="color-picker">
+            <label for="color2">Face 2</label>
+            <input type="color" id="color2" value="#00E5FF" />
+          </div>
+          <div class="color-picker">
+            <label for="color3">Face 3</label>
+            <input type="color" id="color3" value="#333380" />
+          </div>
+          <div class="color-picker">
+            <label for="color4">Face 4</label>
+            <input type="color" id="color4" value="#000000" />
+          </div>
         </div>
+
+        <div class="slider">
+          No. of Subdivision
+          <div class="slider-container">
+            1<input
+              class="slide"
+              id="subdiv-slider"
+              type="range"
+              min="1"
+              max="5"
+              value="3"
+            />5
+            <div class="textbox">
+              <p id="subdiv-text">3</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="slider">
+          Animation Speed
+          <div class="slider-container">
+            0.5<input
+              class="slide"
+              id="speed-slider"
+              type="range"
+              min="0.5"
+              max="10"
+              value="5"
+              step="0.5"
+            />10
+            <div class="textbox">
+              <p id="speed-text">5.0</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="slider">
+          Bounce Duration (seconds)
+          <div class="slider-container">
+            1.0<input
+              class="slide"
+              id="timer-slider"
+              type="range"
+              min="1.0"
+              max="20.0"
+              value="5.0"
+              step="0.5"
+            />20.0
+            <div class="textbox">
+              <p id="timer-text">5.0</p>
+            </div>
+          </div>
+        </div>
+
+        <p>Additional Properties</p>
+        <div class="additional-properties">
+          <div class="file-upload-container">
+            <label for="background-file">Background Image (PNG):</label>
+            <input type="file" id="background-file" accept=".png" />
+            <div class="checkbox-container">
+              <input type="checkbox" id="background-checkbox" disabled />
+              <label for="background-checkbox">Show Background</label>
+            </div>
+          </div>
+
+          <div class="file-upload-container">
+            <label for="music-file">Background Music (MP3):</label>
+            <input type="file" id="music-file" accept=".mp3" />
+            <div class="checkbox-container">
+              <input type="checkbox" id="music-checkbox" disabled />
+              <label for="music-checkbox">Enable Music</label>
+            </div>
+          </div>
+        </div>
+
+        <input id="anim-btn" type="button" value="Start Animation" />
+      </div>
+      <div class="canvas">
+        <canvas id="gl-canvas" width="1280" height="720">
+          Error: your browser doesn't support the HTML5 canvas element
+        </canvas>
+      </div>
     </div>
-    
-</body>
-
+  </body>
 </html>
