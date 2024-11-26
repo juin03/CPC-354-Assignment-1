@@ -115,6 +115,10 @@ var cumulativeRotation = {
 var randomColorsCheckbox;
 var enableRandomColors = false;
 
+// Add these constants at the top of the file
+const DEFAULT_BACKGROUND_IMAGE = 'iceBackground.png';
+const DEFAULT_BACKGROUND_MUSIC = 'jingleBell.mp3';
+
 
 /*-----------------------------------------------------------------------------------*/
 // WebGL Utilities
@@ -125,12 +129,39 @@ window.onload = function init()
 {
     // Primitive (geometric shape) initialization
     divideTetra(vertices[0], vertices[1], vertices[2], vertices[3], subdivide);
-
+    
+    // Load default background and music
+    loadDefaultAssets();
+    
     // WebGL setups
     getUIElement();
     configWebGL();
     initSequenceBuilder();
     render();
+}
+
+// Load default background and music
+function loadDefaultAssets() {
+    // Load default background image
+    customBackgroundImage = new Image();
+    customBackgroundImage.onload = function() {
+        backgroundCheckbox.disabled = false;
+        backgroundCheckbox.checked = true;
+        showBackground = true;
+        const canvas = document.getElementById("gl-canvas");
+        canvas.style.backgroundImage = `url(${DEFAULT_BACKGROUND_IMAGE})`;
+        canvas.classList.add('show-background');
+    };
+    customBackgroundImage.src = DEFAULT_BACKGROUND_IMAGE;
+
+    // Load default background music
+    backgroundMusic = new Audio(DEFAULT_BACKGROUND_MUSIC);
+    backgroundMusic.loop = true;
+    backgroundMusic.addEventListener('canplaythrough', function() {
+        musicCheckbox.disabled = false;
+        musicCheckbox.checked = true;
+        enableMusic = true;
+    });
 }
 
 // Retrieve all elements from HTML and store in the corresponding variables
@@ -295,6 +326,13 @@ function getUIElement()
     randomColorsCheckbox.onchange = function(event) {
         enableRandomColors = event.target.checked;
     };
+
+    // Update file input displays to show default files
+    const backgroundFileLabel = document.querySelector('label[for="background-file"]');
+    backgroundFileLabel.textContent = `Background Image (PNG): ${DEFAULT_BACKGROUND_IMAGE}`;
+
+    const musicFileLabel = document.querySelector('label[for="music-file"]');
+    musicFileLabel.textContent = `Background Music (MP3): ${DEFAULT_BACKGROUND_MUSIC}`;
 }
 
 // Configure WebGL Settings
