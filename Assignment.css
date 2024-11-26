@@ -551,7 +551,6 @@ input[type="checkbox"]:disabled + label {
     color: #ffffff;
     cursor: pointer;
 }
-
 .file-upload-container input[type="file"]:hover {
     border-color: #0077b6;
 }

@@ -111,6 +111,13 @@ var backgroundMusic;
 var backgroundFile, musicFile;
 var customBackgroundImage, customBackgroundMusic;
 
+// Add to variable declarations section
+var cumulativeRotation = {
+    X: 0,
+    Y: 0,
+    Z: 0
+};
+
 
 /*-----------------------------------------------------------------------------------*/
 // WebGL Utilities
@@ -406,16 +413,17 @@ function animUpdate() {
     const speedFactor = animationSpeed / 5.0;
     const currentTime = performance.now() / 1000;
     
-    // Get current animation action
     const currentAction = animationSequence[currentSequenceIndex];
     let isActionComplete = false;
 
     // Apply any persistent rotations first
     modelViewMatrix = mult(modelViewMatrix, rotateZ(finalRotationZ));
 
+    // Apply translation before any rotations
+    modelViewMatrix = mult(modelViewMatrix, translate(moveX, moveY, 0));
+
     // Handle the action based on its type
     if (typeof currentAction === 'object' && currentAction.type === 'rotate') {
-        // Handle rotation actions
         const rotationSpeed = 2 * speedFactor;
         const targetDegrees = currentAction.degrees;
         const rotationDirection = targetDegrees >= 0 ? 1 : -1;
@@ -423,33 +431,38 @@ function animUpdate() {
         switch (currentAction.axis) {
             case 'X':
                 rotationAngle += rotationSpeed * rotationDirection;
-                modelViewMatrix = mult(modelViewMatrix, rotate(rotationAngle, 1, 0, 0));
                 if (Math.abs(rotationAngle) >= Math.abs(targetDegrees)) {
+                    cumulativeRotation.X += targetDegrees;
                     rotationAngle = 0;
                     isActionComplete = true;
                 }
+                modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.X + rotationAngle, 1, 0, 0));
                 break;
             case 'Y':
                 YrotationAngle += rotationSpeed * rotationDirection;
-                modelViewMatrix = mult(modelViewMatrix, rotate(YrotationAngle, 0, 1, 0));
                 if (Math.abs(YrotationAngle) >= Math.abs(targetDegrees)) {
+                    cumulativeRotation.Y += targetDegrees;
                     YrotationAngle = 0;
                     isActionComplete = true;
                 }
+                modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Y + YrotationAngle, 0, 1, 0));
                 break;
             case 'Z':
                 ZrotationAngle += rotationSpeed * rotationDirection;
-                modelViewMatrix = mult(modelViewMatrix, rotate(ZrotationAngle, 0, 0, 1));
                 if (Math.abs(ZrotationAngle) >= Math.abs(targetDegrees)) {
+                    cumulativeRotation.Z += targetDegrees;
                     ZrotationAngle = 0;
                     isActionComplete = true;
-                    if (currentAction.degrees === 180 || currentAction.degrees === -180) {
-                        finalRotationZ += currentAction.degrees;  // Accumulate the rotation
-                    }
                 }
+                modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Z + ZrotationAngle, 0, 0, 1));
                 break;
         }
     } else {
+        // Apply cumulative rotations for non-rotation actions
+        modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.X, 1, 0, 0));
+        modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Y, 0, 1, 0));
+        modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Z, 0, 0, 1));
+        
         switch (currentAction) {
             case 'center':
                 const returnSpeed = 0.02 * speedFactor;
@@ -517,8 +530,7 @@ function animUpdate() {
         }
     }
 
-    // Apply common transformations
-    modelViewMatrix = mult(modelViewMatrix, translate(moveX, moveY, 0));
+    // Apply scale after rotations
     modelViewMatrix = mult(modelViewMatrix, scale(scaleNum, scaleNum, scaleNum));
     
     gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelViewMatrix));
@@ -555,9 +567,9 @@ function resetAnimationState() {
     moveX = 0;
     moveY = 0;
     rotationAngle = 0;
-    finalRotationZ = 0;
     YrotationAngle = 0;
     ZrotationAngle = 0;
+    cumulativeRotation = { X: 0, Y: 0, Z: 0 };  // Reset cumulative rotations
     scaleNum = 1;
     targetScale = 1;
     isBouncing = false;
