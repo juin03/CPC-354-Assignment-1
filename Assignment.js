@@ -68,12 +68,6 @@ const BOUNCE_WIDTH = 2.5;  // Width of bounce area
 const BOUNCE_HEIGHT = 1.0; // Height of bounce area
 
 // Add to variable declarations section
-var timerSlider, timerText;
-var bounceTimer = 5.0; // Default bounce time in seconds
-var bounceStartTime = 0;
-var isBouncing = false;
-
-// Add to variable declarations
 var XrotationSlider, XrotationText;
 var XnumRotations = 1;
 
@@ -148,8 +142,6 @@ function getUIElement()
     startBtn = document.getElementById("anim-btn");
     speedSlider = document.getElementById("speed-slider");
     speedText = document.getElementById("speed-text");
-    timerSlider = document.getElementById("timer-slider");
-    timerText = document.getElementById("timer-text");
 
     // Add color picker elements
     colorPickers = [
@@ -183,16 +175,6 @@ function getUIElement()
 
     subdivSlider.oninput = function(event) {
         subdivText.innerHTML = event.target.value;
-    };
-
-    // Timer slider handlers
-    timerSlider.onchange = function(event) {
-        bounceTimer = parseFloat(event.target.value);
-        timerText.innerHTML = bounceTimer.toFixed(1);
-    };
-
-    timerSlider.oninput = function(event) {
-        timerText.innerHTML = parseFloat(event.target.value).toFixed(1);
     };
 
     // Start/Stop button handler
@@ -700,7 +682,12 @@ function addToSequence(action) {
     } else if (action === 'scale') {
         animationSequence.push({
             type: 'scale',
-            scale: 1.0  // Default to current scale
+            scale: 1.0
+        });
+    } else if (action === 'bounce') {
+        animationSequence.push({
+            type: 'bounce',
+            duration: 5.0  // Default duration
         });
     } else {
         animationSequence.push(action);
@@ -746,6 +733,14 @@ function updateSequenceDisplay() {
                     <input type="number" class="scale-value" value="${action.scale}" 
                            min="0.1" max="5" step="0.1"
                            onchange="updateScaleValue(${index}, this.value)">×
+                    <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
+                `;
+            } else if (action.type === 'bounce') {
+                item.innerHTML = `
+                    Bounce for: 
+                    <input type="number" class="bounce-value" value="${action.duration}" 
+                           min="1" max="20" step="0.5"
+                           onchange="updateBounceValue(${index}, this.value)">s
                     <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
                 `;
             }
