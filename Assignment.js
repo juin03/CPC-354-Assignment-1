@@ -515,7 +515,9 @@ function animUpdate() {
                 moveX += Math.cos(bounceAngle) * moveSpeed;
                 moveY += Math.sin(bounceAngle) * moveSpeed;
 
-                if (currentTime - bounceStartTime >= bounceTimer) {
+                // Use the duration from the action object
+                const bounceDuration = currentAction.duration || 5.0;
+                if (currentTime - bounceStartTime >= bounceDuration) {
                     isBouncing = false;
                     isActionComplete = true;
                 }
@@ -680,7 +682,12 @@ function addToSequence(action) {
     } else if (action === 'scale') {
         animationSequence.push({
             type: 'scale',
-            scale: 1.0  // Default to current scale
+            scale: 1.0
+        });
+    } else if (action === 'bounce') {
+        animationSequence.push({
+            type: 'bounce',
+            duration: 5.0  // Default duration
         });
     } else {
         animationSequence.push(action);
@@ -716,7 +723,7 @@ function updateSequenceDisplay() {
                 item.innerHTML = `
                     Rotate ${action.axis}: 
                     <input type="number" class="rotation-value" value="${action.degrees}" 
-                           min="-360" max="360" step="90"
+                           min="-360" max="360" step="45"
                            onchange="updateRotationValue(${index}, this.value)">°
                     <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
                 `;
@@ -726,6 +733,14 @@ function updateSequenceDisplay() {
                     <input type="number" class="scale-value" value="${action.scale}" 
                            min="0.1" max="5" step="0.1"
                            onchange="updateScaleValue(${index}, this.value)">×
+                    <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
+                `;
+            } else if (action.type === 'bounce') {
+                item.innerHTML = `
+                    Bounce for: 
+                    <input type="number" class="bounce-value" value="${action.duration}" 
+                           min="1" max="20" step="0.5"
+                           onchange="updateBounceValue(${index}, this.value)">s
                     <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
                 `;
             }
@@ -772,6 +787,15 @@ function updateScaleValue(index, value) {
     if (typeof animationSequence[index] === 'object' && 
         (animationSequence[index].type === 'scale')) {
         animationSequence[index].scale = scale;
+    }
+}
+
+// Add this new function for handling bounce duration updates
+function updateBounceValue(index, value) {
+    const duration = parseFloat(value) || 5.0;
+    if (typeof animationSequence[index] === 'object' && 
+        animationSequence[index].type === 'bounce') {
+        animationSequence[index].duration = duration;
     }
 }
 
