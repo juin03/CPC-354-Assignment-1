@@ -89,8 +89,7 @@ const defaultSequence = [
     {type: 'rotate', axis: 'Z', degrees: -180},
     {type: 'rotate', axis: 'Z', degrees: -180},
     {type: 'rotate', axis: 'Z', degrees: 180},
-    'shrink',
-    'enlarge',
+    {type: 'scale', scale: 2.0},
     'bounce',
     'center'
 ];
@@ -413,14 +412,12 @@ function animUpdate() {
     const speedFactor = animationSpeed / 5.0;
     const currentTime = performance.now() / 1000;
     
+    // Get current animation action
     const currentAction = animationSequence[currentSequenceIndex];
     let isActionComplete = false;
 
     // Apply any persistent rotations first
     modelViewMatrix = mult(modelViewMatrix, rotateZ(finalRotationZ));
-
-    // Apply translation before any rotations
-    modelViewMatrix = mult(modelViewMatrix, translate(moveX, moveY, 0));
 
     // Handle the action based on its type
     if (typeof currentAction === 'object' && currentAction.type === 'rotate') {
@@ -432,7 +429,7 @@ function animUpdate() {
             case 'X':
                 rotationAngle += rotationSpeed * rotationDirection;
                 if (Math.abs(rotationAngle) >= Math.abs(targetDegrees)) {
-                    cumulativeRotation.X += targetDegrees;
+                    cumulativeRotation.X += targetDegrees;  // Add to cumulative rotation
                     rotationAngle = 0;
                     isActionComplete = true;
                 }
@@ -441,7 +438,7 @@ function animUpdate() {
             case 'Y':
                 YrotationAngle += rotationSpeed * rotationDirection;
                 if (Math.abs(YrotationAngle) >= Math.abs(targetDegrees)) {
-                    cumulativeRotation.Y += targetDegrees;
+                    cumulativeRotation.Y += targetDegrees;  // Add to cumulative rotation
                     YrotationAngle = 0;
                     isActionComplete = true;
                 }
@@ -450,7 +447,7 @@ function animUpdate() {
             case 'Z':
                 ZrotationAngle += rotationSpeed * rotationDirection;
                 if (Math.abs(ZrotationAngle) >= Math.abs(targetDegrees)) {
-                    cumulativeRotation.Z += targetDegrees;
+                    cumulativeRotation.Z += targetDegrees;  // Add to cumulative rotation
                     ZrotationAngle = 0;
                     isActionComplete = true;
                 }
@@ -463,7 +460,7 @@ function animUpdate() {
         modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Y, 0, 1, 0));
         modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Z, 0, 0, 1));
         
-        switch (currentAction) {
+        switch (currentAction.type || currentAction) {
             case 'center':
                 const returnSpeed = 0.02 * speedFactor;
                 moveX *= (1 - returnSpeed);
@@ -483,20 +480,16 @@ function animUpdate() {
                 }
                 break;
 
-            case 'enlarge':
-                scaleNum += 0.02 * speedFactor;
-                if (scaleNum >= (targetScale + 1.0)) {
-                    scaleNum = targetScale + 1.0;
-                    targetScale = scaleNum;
+            case 'scale':
+                const targetScale = currentAction.scale;
+                const scaleDiff = targetScale - scaleNum;
+                const scaleSpeed = 0.02 * speedFactor;
+                
+                if (Math.abs(scaleDiff) < scaleSpeed) {
+                    scaleNum = targetScale;
                     isActionComplete = true;
-                }
-                break;
-
-            case 'shrink':
-                scaleNum -= 0.02 * speedFactor;
-                if (scaleNum <= 1) {
-                    scaleNum = 1;
-                    isActionComplete = true;
+                } else {
+                    scaleNum += Math.sign(scaleDiff) * scaleSpeed;
                 }
                 break;
 
@@ -530,7 +523,8 @@ function animUpdate() {
         }
     }
 
-    // Apply scale after rotations
+    // Apply common transformations
+    modelViewMatrix = mult(modelViewMatrix, translate(moveX, moveY, 0));
     modelViewMatrix = mult(modelViewMatrix, scale(scaleNum, scaleNum, scaleNum));
     
     gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelViewMatrix));
@@ -681,7 +675,12 @@ function addToSequence(action) {
         animationSequence.push({
             type: 'rotate',
             axis: action.slice(-1),
-            degrees: 360  // Default value
+            degrees: 360
+        });
+    } else if (action === 'scale') {
+        animationSequence.push({
+            type: 'scale',
+            scale: 1.0  // Default to current scale
         });
     } else {
         animationSequence.push(action);
@@ -712,14 +711,24 @@ function updateSequenceDisplay() {
         const item = document.createElement('div');
         item.className = 'sequence-item';
         
-        if (typeof action === 'object' && action.type === 'rotate') {
-            item.innerHTML = `
-                Rotate ${action.axis}: 
-                <input type="number" class="rotation-value" value="${action.degrees}" 
-                       min="-360" max="360" step="90"
-                       onchange="updateRotationValue(${index}, this.value)">°
-                <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
-            `;
+        if (typeof action === 'object') {
+            if (action.type === 'rotate') {
+                item.innerHTML = `
+                    Rotate ${action.axis}: 
+                    <input type="number" class="rotation-value" value="${action.degrees}" 
+                           min="-360" max="360" step="90"
+                           onchange="updateRotationValue(${index}, this.value)">°
+                    <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
+                `;
+            } else if (action.type === 'scale') {
+                item.innerHTML = `
+                    Scale to: 
+                    <input type="number" class="scale-value" value="${action.scale}" 
+                           min="0.1" max="5" step="0.1"
+                           onchange="updateScaleValue(${index}, this.value)">×
+                    <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
+                `;
+            }
         } else {
             item.innerHTML = `
                 ${action}
@@ -754,6 +763,15 @@ function updateRotationValue(index, value) {
     const degrees = parseInt(value) || 360;
     if (typeof animationSequence[index] === 'object' && animationSequence[index].type === 'rotate') {
         animationSequence[index].degrees = degrees;
+    }
+}
+
+// Add this new function for handling scale value updates
+function updateScaleValue(index, value) {
+    const scale = parseFloat(value) || 1.0;
+    if (typeof animationSequence[index] === 'object' && 
+        (animationSequence[index].type === 'scale')) {
+        animationSequence[index].scale = scale;
     }
 }
 
