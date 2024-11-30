@@ -140,11 +140,9 @@ window.onload = function init()
     getUIElement();
     configWebGL();
     initSequenceBuilder();
-    
-    // Enable panel interactivity initially
-    togglePanelInteractivity(true);
-    
     render();
+    
+    togglePanelInteractivity(true);
 }
 
 // Load default background and music
@@ -221,11 +219,8 @@ function getUIElement()
         animFlag = !animFlag;
         
         if(animFlag) {
-            // Disable interactivity immediately when starting animation
-            togglePanelInteractivity(false);
-            
             if (isPaused) {
-                // Resuming from pause
+                // Resuming from pause - don't change panel interaction
                 startBtn.value = "Stop Animation";
                 startBtn.classList.add('active');
                 
@@ -236,11 +231,12 @@ function getUIElement()
                 animUpdate();
                 isPaused = false;
             } else {
-                // Starting fresh
+                // Starting fresh animation - disable panel interaction
                 startBtn.value = "Stop Animation";
                 startBtn.classList.add('active');
                 currentSequenceIndex = 0;
                 resetAnimationState();
+                togglePanelInteractivity(false);  // Disable panel only when starting fresh
                 
                 if (enableMusic) {
                     if (!backgroundMusic) {
@@ -252,7 +248,7 @@ function getUIElement()
                 animUpdate();
             }
         } else {
-            // Stopping/Pausing - keep panel disabled
+            // Stopping/Pausing - don't change panel interaction
             startBtn.value = "Resume Animation";
             startBtn.classList.remove('active');
             
@@ -576,7 +572,8 @@ function animUpdate() {
                 // Only check duration if not infinite
                 if (!currentAction.infinite) {
                     const currentTime = performance.now() / 1000;
-                    if (currentTime - bounceStartTime >= currentAction.duration) {
+                    const elapsedTime = currentTime - bounceStartTime;
+                    if (elapsedTime >= currentAction.duration) {
                         isBouncing = false;
                         isActionComplete = true;
                     }
@@ -645,6 +642,9 @@ function resetAnimationState() {
         backgroundMusic.pause();
         backgroundMusic.currentTime = 0;
     }
+    
+    // Ensure panel is enabled when resetting
+    togglePanelInteractivity(true);
 }
 
 function resetActionState() {
@@ -758,8 +758,8 @@ function addToSequence(action) {
     } else if (action === 'bounce') {
         animationSequence.push({
             type: 'bounce',
-            duration: Infinity,
-            infinite: true
+            duration: 5.0,  // Default duration
+            infinite: false  // Start with finite duration
         });
     } else {
         animationSequence.push(action);
@@ -913,7 +913,7 @@ function toggleInfiniteBounce(index, checked) {
 // Modify the togglePanelInteractivity function
 function togglePanelInteractivity(enable) {
     const panel = document.querySelector('.panel');
-    const interactiveElements = panel.querySelectorAll('button, input, label, .action-btn, .color-picker input, .sequence-item input');
+    const interactiveElements = panel.querySelectorAll('button, input, label');
     
     if (enable) {
         // Enable all interactive elements
@@ -927,6 +927,16 @@ function togglePanelInteractivity(enable) {
             element.style.pointerEvents = 'none';
         });
         panel.style.opacity = '0.6';
+    }
+}
+
+// Add this new function to update bounce duration
+function updateBounceValue(index, value) {
+    const duration = parseFloat(value) || 5.0;
+    if (typeof animationSequence[index] === 'object' && 
+        animationSequence[index].type === 'bounce' &&
+        !animationSequence[index].infinite) {
+        animationSequence[index].duration = duration;
     }
 }
 
