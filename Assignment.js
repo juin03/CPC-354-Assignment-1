@@ -140,6 +140,10 @@ window.onload = function init()
     getUIElement();
     configWebGL();
     initSequenceBuilder();
+    
+    // Enable panel interactivity initially
+    togglePanelInteractivity(true);
+    
     render();
 }
 
@@ -217,6 +221,9 @@ function getUIElement()
         animFlag = !animFlag;
         
         if(animFlag) {
+            // Disable interactivity immediately when starting animation
+            togglePanelInteractivity(false);
+            
             if (isPaused) {
                 // Resuming from pause
                 startBtn.value = "Stop Animation";
@@ -245,7 +252,7 @@ function getUIElement()
                 animUpdate();
             }
         } else {
-            // Stopping/Pausing
+            // Stopping/Pausing - keep panel disabled
             startBtn.value = "Resume Animation";
             startBtn.classList.remove('active');
             
@@ -607,6 +614,9 @@ function animUpdate() {
                 backgroundMusic.pause();
                 backgroundMusic.currentTime = 0;
             }
+            
+            // Re-enable panel interaction when animation completes
+            togglePanelInteractivity(true);
             return;
         }
         resetActionState();
@@ -897,6 +907,26 @@ function toggleInfiniteBounce(index, checked) {
         animationSequence[index].infinite = checked;
         animationSequence[index].duration = checked ? Infinity : 5.0;
         updateSequenceDisplay();
+    }
+}
+
+// Modify the togglePanelInteractivity function
+function togglePanelInteractivity(enable) {
+    const panel = document.querySelector('.panel');
+    const interactiveElements = panel.querySelectorAll('button, input, label, .action-btn, .color-picker input, .sequence-item input');
+    
+    if (enable) {
+        // Enable all interactive elements
+        interactiveElements.forEach(element => {
+            element.style.pointerEvents = 'auto';
+        });
+        panel.style.opacity = '1';
+    } else {
+        // Disable all interactive elements but keep panel scrollable
+        interactiveElements.forEach(element => {
+            element.style.pointerEvents = 'none';
+        });
+        panel.style.opacity = '0.6';
     }
 }
 
