@@ -119,6 +119,9 @@ var enableRandomColors = false;
 const DEFAULT_BACKGROUND_IMAGE = 'iceBackground.png';
 const DEFAULT_BACKGROUND_MUSIC = 'jingleBell.mp3';
 
+// Add this variable to track animation state
+let isPaused = false;
+
 
 /*-----------------------------------------------------------------------------------*/
 // WebGL Utilities
@@ -212,29 +215,45 @@ function getUIElement()
     // Start/Stop button handler
     startBtn.onclick = function() {
         animFlag = !animFlag;
+        
         if(animFlag) {
-            startBtn.value = "Stop Animation";
-            startBtn.classList.add('active');
-            currentSequenceIndex = 0;
-            resetAnimationState();
-            
-            if (enableMusic) {
-                if (!backgroundMusic) {
-                    initAudio();
+            if (isPaused) {
+                // Resuming from pause
+                startBtn.value = "Stop Animation";
+                startBtn.classList.add('active');
+                
+                if (enableMusic && backgroundMusic) {
+                    backgroundMusic.play();
                 }
-                backgroundMusic.play();
+                
+                animUpdate();
+                isPaused = false;
+            } else {
+                // Starting fresh
+                startBtn.value = "Stop Animation";
+                startBtn.classList.add('active');
+                currentSequenceIndex = 0;
+                resetAnimationState();
+                
+                if (enableMusic) {
+                    if (!backgroundMusic) {
+                        initAudio();
+                    }
+                    backgroundMusic.play();
+                }
+                
+                animUpdate();
             }
-            
-            animUpdate();
         } else {
-            startBtn.value = "Start Animation";
+            // Stopping/Pausing
+            startBtn.value = "Resume Animation";
             startBtn.classList.remove('active');
             
             if (backgroundMusic) {
                 backgroundMusic.pause();
-                backgroundMusic.currentTime = 0;
             }
             
+            isPaused = true;
             window.cancelAnimationFrame(animFrame);
         }
     };
@@ -610,6 +629,7 @@ function resetAnimationState() {
     targetScale = 1;
     isBouncing = false;
     currentSequenceIndex = 0;
+    isPaused = false;
     
     if (backgroundMusic) {
         backgroundMusic.pause();
