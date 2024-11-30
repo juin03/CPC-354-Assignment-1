@@ -84,7 +84,7 @@ const defaultSequence = [
     {type: 'rotate', axis: 'Z', degrees: -180},
     {type: 'rotate', axis: 'Z', degrees: 180},
     {type: 'scale', scale: 2.0},
-    'bounce',
+    {type: 'bounce', duration: Infinity, infinite: true},
     'center'
 ];
 
@@ -501,7 +501,7 @@ function animUpdate() {
         }
     }
 
-    // Apply all rotations in order: first cumulative, then current animation
+    // Apply all rotations in order
     modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.X + rotationAngle, 1, 0, 0));
     modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Y + YrotationAngle, 0, 1, 0));
     modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Z + ZrotationAngle, 0, 0, 1));
@@ -521,21 +521,7 @@ function animUpdate() {
                     scaleNum += Math.sign(scaleDiff) * scaleSpeed;
                 }
                 break;
-        }
-    } else if (currentAction) {
-        switch (currentAction) {
-            case 'center':
-                const returnSpeed = 0.02 * speedFactor;
-                moveX *= (1 - returnSpeed);
-                moveY *= (1 - returnSpeed);
                 
-                if (Math.abs(moveX) < 0.001 && Math.abs(moveY) < 0.001) {
-                    moveX = 0;
-                    moveY = 0;
-                    isActionComplete = true;
-                }
-                break;
-
             case 'bounce':
                 if (!isBouncing) {
                     bounceStartTime = performance.now() / 1000;
@@ -546,6 +532,7 @@ function animUpdate() {
                 const nextX = moveX + Math.cos(bounceAngle) * moveSpeed;
                 const nextY = moveY + Math.sin(bounceAngle) * moveSpeed;
                 
+                // Check boundary collisions
                 if (Math.abs(nextX) > BOUNCE_WIDTH) {
                     bounceAngle = Math.PI - bounceAngle;
                     bounceAngle += (Math.random() - 0.5) * 0.2;
@@ -560,11 +547,25 @@ function animUpdate() {
                 moveX += Math.cos(bounceAngle) * moveSpeed;
                 moveY += Math.sin(bounceAngle) * moveSpeed;
 
-                if (performance.now() / 1000 - bounceStartTime >= 5.0) {
-                    isBouncing = false;
-                    isActionComplete = true;
+                // Only check duration if not infinite
+                if (!currentAction.infinite) {
+                    const currentTime = performance.now() / 1000;
+                    if (currentTime - bounceStartTime >= currentAction.duration) {
+                        isBouncing = false;
+                        isActionComplete = true;
+                    }
                 }
                 break;
+        }
+    } else if (currentAction === 'center') {
+        const returnSpeed = 0.02 * speedFactor;
+        moveX *= (1 - returnSpeed);
+        moveY *= (1 - returnSpeed);
+        
+        if (Math.abs(moveX) < 0.001 && Math.abs(moveY) < 0.001) {
+            moveX = 0;
+            moveY = 0;
+            isActionComplete = true;
         }
     }
 
@@ -727,7 +728,8 @@ function addToSequence(action) {
     } else if (action === 'bounce') {
         animationSequence.push({
             type: 'bounce',
-            duration: 5.0  // Default duration
+            duration: Infinity,
+            infinite: true
         });
     } else {
         animationSequence.push(action);
@@ -777,11 +779,20 @@ function updateSequenceDisplay() {
                 `;
             } else if (action.type === 'bounce') {
                 item.innerHTML = `
-                    Bounce for: 
-                    <input type="number" class="bounce-value" value="${action.duration}" 
-                           min="1" max="20" step="0.5"
-                           onchange="updateBounceValue(${index}, this.value)">s
-                    <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
+                    <div class="bounce-input-group">
+                        Bounce for: 
+                        <input type="number" class="bounce-value" value="${action.infinite ? '∞' : action.duration}" 
+                               min="1" max="20" step="0.5"
+                               ${action.infinite ? 'disabled' : ''}
+                               onchange="updateBounceValue(${index}, this.value)">s
+                        <label class="infinite-checkbox">
+                            <input type="checkbox" 
+                                   ${action.infinite ? 'checked' : ''} 
+                                   onchange="toggleInfiniteBounce(${index}, this.checked)">
+                            Infinite
+                        </label>
+                        <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
+                    </div>
                 `;
             }
         } else {
@@ -857,5 +868,15 @@ function updateRandomColors() {
     // Update the buffer data
     gl.bindBuffer(gl.ARRAY_BUFFER, colBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW);
+}
+
+// Add new function to toggle infinite bounce
+function toggleInfiniteBounce(index, checked) {
+    if (typeof animationSequence[index] === 'object' && 
+        animationSequence[index].type === 'bounce') {
+        animationSequence[index].infinite = checked;
+        animationSequence[index].duration = checked ? Infinity : 5.0;
+        updateSequenceDisplay();
+    }
 }
 

@@ -468,7 +468,7 @@ input[type="checkbox"]:disabled + label {
     animation: fadeIn 0.3s ease;
 }
 
-.sequence-item input.rotation-value {
+.sequence-item input.bounce-value {
     width: 60px;
     padding: 2px 4px;
     border: 1px solid #fff;
@@ -479,8 +479,8 @@ input[type="checkbox"]:disabled + label {
     font-size: 14px;
 }
 
-.sequence-item input.rotation-value::-webkit-inner-spin-button,
-.sequence-item input.rotation-value::-webkit-outer-spin-button {
+.sequence-item input.bounce-value::-webkit-inner-spin-button,
+.sequence-item input.bounce-value::-webkit-outer-spin-button {
     opacity: 1;
     height: 20px;
 }
@@ -593,7 +593,7 @@ input[type="checkbox"]:disabled + label {
     cursor: not-allowed;
 }
 
-.sequence-item input.scale-value {
+.sequence-item input {
     width: 60px;
     padding: 2px 4px;
     border: 1px solid #fff;
@@ -604,8 +604,34 @@ input[type="checkbox"]:disabled + label {
     font-size: 14px;
 }
 
-.sequence-item input.scale-value::-webkit-inner-spin-button,
-.sequence-item input.scale-value::-webkit-outer-spin-button {
+.sequence-item input::-webkit-inner-spin-button,
+.sequence-item input::-webkit-outer-spin-button {
     opacity: 1;
     height: 20px;
+}
+
+/* Add these new styles */
+.bounce-input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.infinite-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: white;
+    cursor: pointer;
+}
+
+.infinite-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+}
+
+.sequence-item input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
