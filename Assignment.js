@@ -119,6 +119,13 @@ var enableRandomColors = false;
 const DEFAULT_BACKGROUND_IMAGE = 'iceBackground.png';
 const DEFAULT_BACKGROUND_MUSIC = 'jingleBell.mp3';
 
+// Add these variables to track transition states
+var transitionRotation = {
+    X: 0,
+    Y: 0,
+    Z: 0
+};
+
 
 /*-----------------------------------------------------------------------------------*/
 // WebGL Utilities
@@ -171,6 +178,7 @@ function getUIElement()
     subdivSlider = document.getElementById("subdiv-slider");
     subdivText = document.getElementById("subdiv-text");
     startBtn = document.getElementById("anim-btn");
+    resetBtn = document.getElementById("reset-btn");
     speedSlider = document.getElementById("speed-slider");
     speedText = document.getElementById("speed-text");
 
@@ -333,6 +341,14 @@ function getUIElement()
 
     const musicFileLabel = document.querySelector('label[for="music-file"]');
     musicFileLabel.textContent = `Background Music (MP3): ${DEFAULT_BACKGROUND_MUSIC}`;
+
+    // Add reset button handler
+    resetBtn.onclick = function() {
+        // Clean up resources before refreshing
+        cleanup();
+        // Refresh the page
+        window.location.reload();
+    };
 }
 
 // Configure WebGL Settings
@@ -442,14 +458,29 @@ function animUpdate() {
     const speedFactor = animationSpeed / 5.0;
     const currentTime = performance.now() / 1000;
     
-    // Get current animation action
     const currentAction = animationSequence[currentSequenceIndex];
     let isActionComplete = false;
 
-    // Apply any persistent rotations first
-    modelViewMatrix = mult(modelViewMatrix, rotateZ(finalRotationZ));
+    // Smoothly transition any remaining rotation
+    const transitionSpeed = 2 * speedFactor;
+    ['X', 'Y', 'Z'].forEach(axis => {
+        if (Math.abs(transitionRotation[axis]) > 0.01) {
+            const step = Math.min(Math.abs(transitionRotation[axis]), transitionSpeed);
+            const direction = Math.sign(transitionRotation[axis]);
+            transitionRotation[axis] -= step * direction;
+            cumulativeRotation[axis] += step * direction;
+        } else {
+            transitionRotation[axis] = 0;
+        }
+    });
 
-    // Handle the action based on its type
+    // Apply all cumulative transformations
+    modelViewMatrix = mult(modelViewMatrix, translate(moveX, moveY, 0));
+    modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.X, 1, 0, 0));
+    modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Y, 0, 1, 0));
+    modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Z, 0, 0, 1));
+
+    // Handle the current action
     if (typeof currentAction === 'object' && currentAction.type === 'rotate') {
         const rotationSpeed = 2 * speedFactor;
         const targetDegrees = currentAction.degrees;
@@ -459,53 +490,45 @@ function animUpdate() {
             case 'X':
                 rotationAngle += rotationSpeed * rotationDirection;
                 if (Math.abs(rotationAngle) >= Math.abs(targetDegrees)) {
-                    cumulativeRotation.X += targetDegrees;  // Add to cumulative rotation
+                    transitionRotation.X = rotationAngle - (Math.sign(rotationAngle) * Math.abs(targetDegrees));
+                    cumulativeRotation.X += targetDegrees;
                     rotationAngle = 0;
                     isActionComplete = true;
                 }
-                modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.X + rotationAngle, 1, 0, 0));
+                modelViewMatrix = mult(modelViewMatrix, rotate(rotationAngle, 1, 0, 0));
                 break;
             case 'Y':
                 YrotationAngle += rotationSpeed * rotationDirection;
                 if (Math.abs(YrotationAngle) >= Math.abs(targetDegrees)) {
-                    cumulativeRotation.Y += targetDegrees;  // Add to cumulative rotation
+                    transitionRotation.Y = YrotationAngle - (Math.sign(YrotationAngle) * Math.abs(targetDegrees));
+                    cumulativeRotation.Y += targetDegrees;
                     YrotationAngle = 0;
                     isActionComplete = true;
                 }
-                modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Y + YrotationAngle, 0, 1, 0));
+                modelViewMatrix = mult(modelViewMatrix, rotate(YrotationAngle, 0, 1, 0));
                 break;
             case 'Z':
                 ZrotationAngle += rotationSpeed * rotationDirection;
                 if (Math.abs(ZrotationAngle) >= Math.abs(targetDegrees)) {
-                    cumulativeRotation.Z += targetDegrees;  // Add to cumulative rotation
+                    transitionRotation.Z = ZrotationAngle - (Math.sign(ZrotationAngle) * Math.abs(targetDegrees));
+                    cumulativeRotation.Z += targetDegrees;
                     ZrotationAngle = 0;
                     isActionComplete = true;
                 }
-                modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Z + ZrotationAngle, 0, 0, 1));
+                modelViewMatrix = mult(modelViewMatrix, rotate(ZrotationAngle, 0, 0, 1));
                 break;
         }
     } else {
-        // Apply cumulative rotations for non-rotation actions
-        modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.X, 1, 0, 0));
-        modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Y, 0, 1, 0));
-        modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Z, 0, 0, 1));
-        
+        // Handle non-rotation actions
         switch (currentAction.type || currentAction) {
             case 'center':
                 const returnSpeed = 0.02 * speedFactor;
                 moveX *= (1 - returnSpeed);
                 moveY *= (1 - returnSpeed);
-                rotationAngle *= (1 - returnSpeed);
-                scaleNum = 1 + (scaleNum - 1) * (1 - returnSpeed);
-
-                if (Math.abs(moveX) < 0.001 && 
-                    Math.abs(moveY) < 0.001 && 
-                    Math.abs(rotationAngle) < 0.001 && 
-                    Math.abs(scaleNum - 1) < 0.001) {
+                
+                if (Math.abs(moveX) < 0.001 && Math.abs(moveY) < 0.001) {
                     moveX = 0;
                     moveY = 0;
-                    rotationAngle = 0;
-                    scaleNum = 1;
                     isActionComplete = true;
                 }
                 break;
@@ -563,8 +586,7 @@ function animUpdate() {
         }
     }
 
-    // Apply common transformations
-    modelViewMatrix = mult(modelViewMatrix, translate(moveX, moveY, 0));
+    // Apply scale last
     modelViewMatrix = mult(modelViewMatrix, scale(scaleNum, scaleNum, scaleNum));
     
     gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelViewMatrix));
@@ -620,6 +642,8 @@ function resetActionState() {
     YrotationAngle = 0;
     ZrotationAngle = 0;
     isBouncing = false;
+    
+    // Don't reset transition rotations here, let them accumulate
 }
 
 /*-----------------------------------------------------------------------------------*/
