@@ -79,10 +79,10 @@ var YrotationAngle = 0, ZrotationAngle = 0;
 let animationSequence = [];
 let currentSequenceIndex = 0;
 const defaultSequence = [
-    {type: 'rotate', axis: 'Z', degrees: 180},
-    {type: 'rotate', axis: 'Z', degrees: -180},
     {type: 'rotate', axis: 'Z', degrees: -180},
     {type: 'rotate', axis: 'Z', degrees: 180},
+    {type: 'rotate', axis: 'Z', degrees: 180},
+    {type: 'rotate', axis: 'Z', degrees: -180},
     {type: 'scale', scale: 2.0},
     {type: 'bounce', duration: Infinity, infinite: true},
     'center'
