@@ -85,7 +85,6 @@ const defaultSequence = [
     {type: 'rotate', axis: 'Z', degrees: -180},
     {type: 'scale', scale: 2.0},
     {type: 'bounce', duration: Infinity, infinite: true},
-    'center'
 ];
 
 // Add these variables to track final states after animations
