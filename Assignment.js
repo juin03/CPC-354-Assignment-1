@@ -294,11 +294,14 @@ function getUIElement()
                 return;
             }
 
+            // Update the label with the new file name
+            const backgroundFileLabel = document.querySelector('label[for="background-file"]');
+            backgroundFileLabel.textContent = `Background Image (PNG): ${file.name}`;
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 customBackgroundImage = new Image();
                 customBackgroundImage.onload = function() {
-                    // Enable the checkbox once image is loaded
                     backgroundCheckbox.disabled = false;
                     backgroundCheckbox.checked = true;
                     showBackground = true;
@@ -321,6 +324,10 @@ function getUIElement()
                 return;
             }
 
+            // Update the label with the new file name
+            const musicFileLabel = document.querySelector('label[for="music-file"]');
+            musicFileLabel.textContent = `Background Music (MP3): ${file.name}`;
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 if (backgroundMusic) {
@@ -332,7 +339,6 @@ function getUIElement()
                 backgroundMusic.src = e.target.result;
                 backgroundMusic.loop = true;
                 
-                // Enable the checkbox once music is loaded
                 musicCheckbox.disabled = false;
                 musicCheckbox.checked = true;
                 enableMusic = true;
