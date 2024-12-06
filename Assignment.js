@@ -54,18 +54,13 @@ var animationSpeed = 5.0;
 var bounceRadius = 1.0; // Controls the circular boundary
 var bounceAngle = Math.random() * Math.PI * 2; // Random initial angle
 
-// Add these variables for border collision
-const BORDER_LEFT = -3.2;   // Adjust these values to match your brown border
-const BORDER_RIGHT = 3.2;
-const BORDER_TOP = 1.8;
-const BORDER_BOTTOM = -1.8;
-const GASKET_RADIUS = 0.5;  // Approximate radius of the gasket
-
 // Add these constants near your other border constants
 const CENTER_X = 0;  // Center X coordinate
 const CENTER_Y = 0;  // Center Y coordinate
-const BOUNCE_WIDTH = 2.5;  // Width of bounce area
-const BOUNCE_HEIGHT = 1.0; // Height of bounce area
+let normalizedWidth;
+let normalizedHeight;
+let BOUNCE_WIDTH;
+let BOUNCE_HEIGHT;
 
 var XrotationAngle = 0, YrotationAngle = 0, ZrotationAngle = 0;
 
@@ -435,6 +430,7 @@ function render()
     // Pass a 4x4 model view matrix from JavaScript to the GPU for use in shader
     modelViewMatrix = mat4();
     modelViewMatrix = mult(modelViewMatrix, scale(1, 1, 1));
+    modelViewMatrix = mult(modelViewMatrix, translate(0, 0.2357, 0));
     gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelViewMatrix));
 
     // Draw the primitive / geometric shape
@@ -474,6 +470,7 @@ function recompute()
 function animUpdate() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     modelViewMatrix = mat4();
+    modelViewMatrix = mult(modelViewMatrix, translate(0, 0.2357, 0));
     
     const speedFactor = animationSpeed / 5.0;
     const currentAction = animationSequence[currentSequenceIndex];
@@ -558,6 +555,9 @@ function animUpdate() {
                 const moveSpeed = 0.03 * speedFactor;
                 const nextX = moveX + Math.cos(bounceAngle) * moveSpeed;
                 const nextY = moveY + Math.sin(bounceAngle) * moveSpeed;
+                
+                BOUNCE_WIDTH = 3.333 * (1 - (scaleNum - 1) * 0.25);
+                BOUNCE_HEIGHT = 1.677 * (1 - (scaleNum - 1) * 0.3);
                 
                 // Check boundary collisions
                 if (Math.abs(nextX) > BOUNCE_WIDTH) {
