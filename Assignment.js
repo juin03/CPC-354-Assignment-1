@@ -40,7 +40,7 @@ var currentColors = [...baseColors]; // Create a copy of baseColors
 
 // Add these animation state variables after the existing variable declarations
 var animationState = 0; // Controls which animation phase we're in
-var rotationAngle = 0;  // Current rotation angle
+
 var moveX = 0;         // Position for random movement
 var moveY = 0;
 var moveVelX = 0.03;   // Velocity for random movement
@@ -67,13 +67,7 @@ const CENTER_Y = 0;  // Center Y coordinate
 const BOUNCE_WIDTH = 2.5;  // Width of bounce area
 const BOUNCE_HEIGHT = 1.0; // Height of bounce area
 
-// Add to variable declarations section
-var XrotationSlider, XrotationText;
-var XnumRotations = 1;
-
-// Add to variable declarations
-var YrotationSlider, ZrotationSlider;
-var YrotationAngle = 0, ZrotationAngle = 0;
+var XrotationAngle = 0, YrotationAngle = 0, ZrotationAngle = 0;
 
 // Add to existing variable declarations
 let animationSequence = [];
@@ -87,8 +81,6 @@ const defaultSequence = [
     {type: 'bounce', duration: Infinity, infinite: true},
 ];
 
-// Add these variables to track final states after animations
-var finalRotationZ = 0;  // Tracks the final Z rotation after right/left 180
 
 // Add to your variable declarations
 var backgroundCheckbox;
@@ -129,18 +121,25 @@ let isPaused = false;
 // Execute the init() function when the web page has fully loaded
 window.onload = function init()
 {
-    // Primitive (geometric shape) initialization
-    divideTetra(vertices[0], vertices[1], vertices[2], vertices[3], subdivide);
-    
-    // Load default background and music
-    loadDefaultAssets();
-    
-    // WebGL setups
+    // Get UI elements first
     getUIElement();
+
+    // Initialize the gasket
+    divideTetra(vertices[0], vertices[1], vertices[2], vertices[3], subdivide);
+
+    // Configure WebGL after gasket initialization
     configWebGL();
+
+    // Load default assets
+    loadDefaultAssets();
+
+    // Initialize sequence builder
     initSequenceBuilder();
+
+    // Initial render
     render();
-    
+
+    // Enable panel interactivity
     togglePanelInteractivity(true);
 }
 
@@ -161,11 +160,10 @@ function loadDefaultAssets() {
     // Load default background music
     backgroundMusic = new Audio(DEFAULT_BACKGROUND_MUSIC);
     backgroundMusic.loop = true;
-    backgroundMusic.addEventListener('canplaythrough', function() {
-        musicCheckbox.disabled = false;
-        musicCheckbox.checked = true;
-        enableMusic = true;
-    });
+    musicCheckbox.disabled = false;
+    musicCheckbox.checked = true;
+    enableMusic = true;
+ 
 }
 
 // Retrieve all elements from HTML and store in the corresponding variables
@@ -223,9 +221,9 @@ function getUIElement()
                 startBtn.value = "Stop Animation";
                 startBtn.classList.add('active');
                 
-                if (enableMusic && backgroundMusic) {
-                    backgroundMusic.play();
-                }
+                // if (enableMusic && backgroundMusic) {
+                //     backgroundMusic.play();
+                // }
                 
                 animUpdate();
                 isPaused = false;
@@ -450,7 +448,9 @@ function recompute()
     
     // Reset animation variables but keep current colors
     animationState = 0;
-    rotationAngle = 0;
+    XrotationAngle = 0;
+    YrotationAngle = 0;
+    ZrotationAngle = 0;
     moveX = 0;
     moveY = 0;
     currentIteration = 1;
@@ -471,7 +471,7 @@ function animUpdate() {
     
     const speedFactor = animationSpeed / 5.0;
     const currentAction = animationSequence[currentSequenceIndex];
-    let isActionComplete = false;
+    var isActionComplete = false;
 
     // Apply translation first
     modelViewMatrix = mult(modelViewMatrix, translate(moveX, moveY, 0));
@@ -484,14 +484,14 @@ function animUpdate() {
         switch (currentAction.axis) {
             case 'X':
                 // Calculate remaining degrees to target
-                const remainingX = targetDegrees - rotationAngle;
+                const remainingX = targetDegrees - XrotationAngle;
                 // Apply smaller of: rotation speed or remaining degrees
                 const stepX = Math.min(Math.abs(remainingX), rotationSpeed) * Math.sign(remainingX);
-                rotationAngle += stepX;
+                XrotationAngle += stepX;
                 
                 if (Math.abs(remainingX) <= rotationSpeed) {
                     cumulativeRotation.X += targetDegrees;
-                    rotationAngle = 0;
+                    XrotationAngle = 0;
                     isActionComplete = true;
                 }
                 break;
@@ -523,7 +523,7 @@ function animUpdate() {
     }
 
     // Apply all rotations in order
-    modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.X + rotationAngle, 1, 0, 0));
+    modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.X + XrotationAngle, 1, 0, 0));
     modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Y + YrotationAngle, 0, 1, 0));
     modelViewMatrix = mult(modelViewMatrix, rotate(cumulativeRotation.Z + ZrotationAngle, 0, 0, 1));
 
@@ -627,7 +627,7 @@ function animUpdate() {
 function resetAnimationState() {
     moveX = 0;
     moveY = 0;
-    rotationAngle = 0;
+    XrotationAngle = 0;
     YrotationAngle = 0;
     ZrotationAngle = 0;
     cumulativeRotation = { X: 0, Y: 0, Z: 0 };  // Reset cumulative rotations
@@ -648,7 +648,7 @@ function resetAnimationState() {
 
 function resetActionState() {
     // Only reset the temporary rotation angles, not the cumulative ones
-    rotationAngle = 0;
+    XrotationAngle = 0;
     YrotationAngle = 0;
     ZrotationAngle = 0;
     isBouncing = false;
