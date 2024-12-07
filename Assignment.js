@@ -1,24 +1,20 @@
-/*-----------------------------------------------------------------------------------*/
 // Variable Declaration
-/*-----------------------------------------------------------------------------------*/
 
-// Common variables
+/*----------------------------------------------------------------------------*/
+//  WebGL Core Variables
+/*----------------------------------------------------------------------------*/
 var canvas, gl, program;
 var posBuffer, colBuffer, vPosition, vColor;
 var modelViewMatrixLoc, projectionMatrixLoc;
 var modelViewMatrix, projectionMatrix;
 
-// Variables referencing HTML elements
-// theta = [x, y, z]
-var subdivSlider, subdivText, startBtn;
-var theta = [0, 0, 0], subdivide = 3, scaleNum = 1, scaleMin = 0.5, scaleMax = 4, scaleSign = 1;
-var animFrame = false, animFlag = false;
-
-// Variables for the 3D Sierpinski gasket
+/*----------------------------------------------------------------------------*/
+//  Sierpinski Gasket Variables
+/*----------------------------------------------------------------------------*/
+// Core geometry and color data
 var points = [], colors = [];
 
 // Vertices for the 3D Sierpinski gasket (X-axis, Y-axis, Z-axis, W)
-// For 3D, you need to set the z-axis to create the perception of depth
 var vertices = [
     vec4( 0.0000,  0.0000, -1.0000, 1.0000),
     vec4( 0.0000,  0.9428,  0.3333, 1.0000),
@@ -26,7 +22,7 @@ var vertices = [
     vec4( 0.8165, -0.4714,  0.3333, 1.0000)
 ];
 
-// Different colors for a tetrahedron (RGBA)
+// Color configuration
 var baseColors = [
     vec4(1.0, 0.2, 0.4, 1.0),
     vec4(0.0, 0.9, 1.0, 1.0),
@@ -37,34 +33,41 @@ var baseColors = [
 // Add these variables after the baseColors declaration
 var colorPickers;
 var currentColors = [...baseColors]; // Create a copy of baseColors
+var randomColorsCheckbox;
+var enableRandomColors = false;
 
-// Add these animation state variables after the existing variable declarations
+/*----------------------------------------------------------------------------*/
+//  Animation Variables
+/*----------------------------------------------------------------------------*/
+// Core animation state
+var animFrame = false, animFlag = false;
+let isPaused = false;
 var animationState = 0; // Controls which animation phase we're in
-
-var moveX = 0;         // Position for random movement
-var moveY = 0;
-var moveVelX = 0.03;   // Velocity for random movement
-var moveVelY = 0.02;
-
-// Add these variables to your variable declarations
-var iterSlider, iterText, speedSlider, speedText;
-var iteration = 3;
-var targetScale = 2.0; // Will be updated based on iteration
 var animationSpeed = 5.0;
-var bounceRadius = 1.0; // Controls the circular boundary
-var bounceAngle = Math.random() * Math.PI * 2; // Random initial angle
 
-// Add these constants near your other border constants
-const CENTER_X = 0;  // Center X coordinate
-const CENTER_Y = 0;  // Center Y coordinate
-let normalizedWidth;
-let normalizedHeight;
-let BOUNCE_WIDTH;
-let BOUNCE_HEIGHT;
-
+// Rotation variables
+var theta = [0, 0, 0];
 var XrotationAngle = 0, YrotationAngle = 0, ZrotationAngle = 0;
+var cumulativeRotation = {
+    X: 0,
+    Y: 0,
+    Z: 0
+};
 
-// Add to existing variable declarations
+// Movement and scaling variables
+var moveX = 0, moveY = 0;
+var scaleNum = 1;
+var scaleMin = 0.5;
+var scaleMax = 4;
+var scaleSign = 1;
+var targetScale = 2.0;
+
+// Bounce configuration
+var bounceAngle = Math.random() * Math.PI * 2; // Random initial angle
+const BOUNCE_WIDTH = 2.5; // Width of bounce area
+const BOUNCE_HEIGHT = 1.0; // Height of bounce area
+
+// Animation sequence control
 let animationSequence = [];
 let currentSequenceIndex = 0;
 const defaultSequence = [
@@ -76,42 +79,37 @@ const defaultSequence = [
     {type: 'bounce', duration: Infinity, infinite: true},
 ];
 
+/*----------------------------------------------------------------------------*/
+//  UI Control Variables
+/*----------------------------------------------------------------------------*/
+// Subdivision controls
+var subdivSlider, subdivText;
+var subdivide = 3;
 
-// Add to your variable declarations
+// Speed controls
+var speedSlider, speedText;
+
+// Button controls
+var startBtn;
+
+// Background controls
 var backgroundCheckbox;
-var showBackground = false;
-
-// Add to your variable declarations
-var musicCheckbox;
-var enableMusic = false;
-var backgroundMusic;
-
-// Add these variables to your variable declarations
-var backgroundFile, musicFile;
-var customBackgroundImage, customBackgroundMusic;
-
-// Add to variable declarations section
-var cumulativeRotation = {
-    X: 0,
-    Y: 0,
-    Z: 0
-};
-
-// Add to your variable declarations at the top
-var randomColorsCheckbox;
-var enableRandomColors = false;
-
-// Add these constants at the top of the file
+var showBackground = true;
+var backgroundFile;
+var customBackgroundImage;
 const DEFAULT_BACKGROUND_IMAGE = 'iceBackground.png';
+
+// Music controls
+var musicCheckbox;
+var enableMusic = true;
+var musicFile;
+var backgroundMusic;
+var customBackgroundMusic;
 const DEFAULT_BACKGROUND_MUSIC = 'jingleBell.mp3';
 
-// Add this variable to track animation state
-let isPaused = false;
-
-
-/*-----------------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 // WebGL Utilities
-/*-----------------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 // Execute the init() function when the web page has fully loaded
 window.onload = function init()
@@ -430,7 +428,6 @@ function render()
     // Pass a 4x4 model view matrix from JavaScript to the GPU for use in shader
     modelViewMatrix = mat4();
     modelViewMatrix = mult(modelViewMatrix, scale(1, 1, 1));
-    modelViewMatrix = mult(modelViewMatrix, translate(0, 0.2357, 0));
     gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelViewMatrix));
 
     // Draw the primitive / geometric shape
@@ -470,9 +467,8 @@ function recompute()
 function animUpdate() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     modelViewMatrix = mat4();
-    modelViewMatrix = mult(modelViewMatrix, translate(0, 0.2357, 0));
     
-    const speedFactor = animationSpeed / 5.0;
+    const speedFactor = animationSpeed / 2.0 ;
     const currentAction = animationSequence[currentSequenceIndex];
     var isActionComplete = false;
 
@@ -555,9 +551,6 @@ function animUpdate() {
                 const moveSpeed = 0.03 * speedFactor;
                 const nextX = moveX + Math.cos(bounceAngle) * moveSpeed;
                 const nextY = moveY + Math.sin(bounceAngle) * moveSpeed;
-                
-                BOUNCE_WIDTH = 3.333 * (1 - (scaleNum - 1) * 0.25);
-                BOUNCE_HEIGHT = 1.677 * (1 - (scaleNum - 1) * 0.3);
                 
                 // Check boundary collisions
                 if (Math.abs(nextX) > BOUNCE_WIDTH) {
