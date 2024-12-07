@@ -1,5 +1,4 @@
 // Variable Declaration
-
 /*----------------------------------------------------------------------------*/
 //  WebGL Core Variables
 /*----------------------------------------------------------------------------*/
@@ -133,30 +132,7 @@ window.onload = function init()
     render();
 
     // Enable panel interactivity
-    togglePanelInteractivity(true);
-}
-
-// Load default background and music
-function loadDefaultAssets() {
-    // Load default background image
-    customBackgroundImage = new Image();
-    customBackgroundImage.onload = function() {
-        backgroundCheckbox.disabled = false;
-        backgroundCheckbox.checked = true;
-        showBackground = true;
-        const canvas = document.getElementById("gl-canvas");
-        canvas.style.backgroundImage = `url(${DEFAULT_BACKGROUND_IMAGE})`;
-        canvas.classList.add('show-background');
-    };
-    customBackgroundImage.src = DEFAULT_BACKGROUND_IMAGE;
-
-    // Load default background music
-    backgroundMusic = new Audio(DEFAULT_BACKGROUND_MUSIC);
-    backgroundMusic.loop = true;
-    musicCheckbox.disabled = false;
-    musicCheckbox.checked = true;
-    enableMusic = true;
- 
+    togglePanelInteractivity(true); // run last to ensure all loaded before use
 }
 
 // Retrieve all elements from HTML and store in the corresponding variables
@@ -169,6 +145,13 @@ function getUIElement()
     resetBtn = document.getElementById("reset-btn");
     speedSlider = document.getElementById("speed-slider");
     speedText = document.getElementById("speed-text");
+    backgroundCheckbox = document.getElementById("background-checkbox");
+    musicCheckbox = document.getElementById("music-checkbox");
+    backgroundFile = document.getElementById("background-file");
+    musicFile = document.getElementById("music-file");
+    randomColorsCheckbox = document.getElementById("random-colors-checkbox");
+    const backgroundFileLabel = document.querySelector('label[for="background-file"]');
+    const musicFileLabel = document.querySelector('label[for="music-file"]');
 
     // Add color picker elements
     colorPickers = [
@@ -187,7 +170,7 @@ function getUIElement()
         });
     });
 
-    // Speed slider handler
+    // Speed slider handler 
     speedSlider.onchange = function(event) {
         animationSpeed = parseFloat(event.target.value);
         speedText.innerHTML = animationSpeed.toFixed(1);
@@ -213,10 +196,6 @@ function getUIElement()
                 // Resuming from pause - don't change panel interaction
                 startBtn.value = "Stop Animation";
                 startBtn.classList.add('active');
-                
-                // if (enableMusic && backgroundMusic) {
-                //     backgroundMusic.play();
-                // }
                 
                 animUpdate();
                 isPaused = false;
@@ -252,7 +231,6 @@ function getUIElement()
     };
 
     // Background and music checkboxes
-    backgroundCheckbox = document.getElementById("background-checkbox");
     backgroundCheckbox.onchange = function(event) {
         showBackground = event.target.checked;
         const canvas = document.getElementById("gl-canvas");
@@ -265,7 +243,7 @@ function getUIElement()
         }
     };
 
-    musicCheckbox = document.getElementById("music-checkbox");
+    
     musicCheckbox.onchange = function(event) {
         enableMusic = event.target.checked;
         if (!enableMusic && backgroundMusic) {
@@ -275,9 +253,6 @@ function getUIElement()
     };
 
     // File upload handlers
-    backgroundFile = document.getElementById("background-file");
-    musicFile = document.getElementById("music-file");
-
     backgroundFile.onchange = function(event) {
         const file = event.target.files[0];
         if (file) {
@@ -341,16 +316,12 @@ function getUIElement()
     };
 
     // Add random colors checkbox handler
-    randomColorsCheckbox = document.getElementById("random-colors-checkbox");
     randomColorsCheckbox.onchange = function(event) {
         enableRandomColors = event.target.checked;
     };
 
     // Update file input displays to show default files
-    const backgroundFileLabel = document.querySelector('label[for="background-file"]');
     backgroundFileLabel.textContent = `Background Image (PNG): ${DEFAULT_BACKGROUND_IMAGE}`;
-
-    const musicFileLabel = document.querySelector('label[for="music-file"]');
     musicFileLabel.textContent = `Background Music (MP3): ${DEFAULT_BACKGROUND_MUSIC}`;
 
     // Add reset button handler
@@ -360,6 +331,33 @@ function getUIElement()
         // Refresh the page
         window.location.reload();
     };
+}
+
+// Subdivide a tetrahedron
+function divideTetra(a, b, c, d, count)
+{
+    // Check for end of recursion
+    if(count === 0)
+    {
+        tetra(a, b, c, d);
+    }
+
+    // Find midpoints of sides and divide into four smaller tetrahedra
+    else
+    {
+        var ab = mix(a, b, 0.5);
+        var ac = mix(a, c, 0.5);
+        var ad = mix(a, d, 0.5);
+        var bc = mix(b, c, 0.5);
+        var bd = mix(b, d, 0.5);
+        var cd = mix(c, d, 0.5);
+        --count;
+
+        divideTetra(a, ab, ac, ad, count);
+        divideTetra(ab, b, bc, bd, count);
+        divideTetra(ac, bc, c, cd, count);
+        divideTetra(ad, bd, cd, d, count);
+    }
 }
 
 // Configure WebGL Settings
@@ -409,6 +407,49 @@ function configWebGL()
     // Get the location of the uniform variables within a compiled shader program
     modelViewMatrixLoc = gl.getUniformLocation(program, "modelViewMatrix");
     projectionMatrixLoc = gl.getUniformLocation(program, "projectionMatrix");
+}
+
+// Load default background and music
+function loadDefaultAssets() {
+    // Load default background image
+    customBackgroundImage = new Image();
+    customBackgroundImage.onload = function() {
+        backgroundCheckbox.disabled = false;
+        backgroundCheckbox.checked = true;
+        showBackground = true;
+        const canvas = document.getElementById("gl-canvas");
+        canvas.style.backgroundImage = `url(${DEFAULT_BACKGROUND_IMAGE})`;
+        canvas.classList.add('show-background');
+    };
+    customBackgroundImage.src = DEFAULT_BACKGROUND_IMAGE;
+
+    // Load default background music
+    backgroundMusic = new Audio(DEFAULT_BACKGROUND_MUSIC);
+    backgroundMusic.loop = true;
+    musicCheckbox.disabled = false;
+    musicCheckbox.checked = true;
+    enableMusic = true;
+ 
+}
+
+// Add these functions after your existing variable declarations
+function initSequenceBuilder() {
+    const sequenceContainer = document.getElementById('animation-sequence');
+    const clearBtn = document.getElementById('clear-sequence');
+    const resetBtn = document.getElementById('reset-default');
+    
+    // Add click handlers for action buttons
+    document.querySelectorAll('.action-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            addToSequence(this.dataset.action);
+        });
+    });
+    
+    clearBtn.addEventListener('click', clearSequence);
+    resetBtn.addEventListener('click', resetToDefault);
+    
+    // Initialize with default sequence
+    resetToDefault();
 }
 
 // Render the graphics for viewing
@@ -677,33 +718,6 @@ function tetra(a, b, c, d)
     triangle(b, c, d, 3);
 }
 
-// Subdivide a tetrahedron
-function divideTetra(a, b, c, d, count)
-{
-    // Check for end of recursion
-    if(count === 0)
-    {
-        tetra(a, b, c, d);
-    }
-
-    // Find midpoints of sides and divide into four smaller tetrahedra
-    else
-    {
-        var ab = mix(a, b, 0.5);
-        var ac = mix(a, c, 0.5);
-        var ad = mix(a, d, 0.5);
-        var bc = mix(b, c, 0.5);
-        var bd = mix(b, d, 0.5);
-        var cd = mix(c, d, 0.5);
-        --count;
-
-        divideTetra(a, ab, ac, ad, count);
-        divideTetra(ab, b, bc, bd, count);
-        divideTetra(ac, bc, c, cd, count);
-        divideTetra(ad, bd, cd, d, count);
-    }
-}
-
 /*-----------------------------------------------------------------------------------*/
 
 // Add these utility functions at the end of the file
@@ -721,25 +735,7 @@ function hexToRgba(hex) {
     return vec4(r, g, b, 1.0);
 }
 
-// Add these functions after your existing variable declarations
-function initSequenceBuilder() {
-    const sequenceContainer = document.getElementById('animation-sequence');
-    const clearBtn = document.getElementById('clear-sequence');
-    const resetBtn = document.getElementById('reset-default');
-    
-    // Add click handlers for action buttons
-    document.querySelectorAll('.action-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            addToSequence(this.dataset.action);
-        });
-    });
-    
-    clearBtn.addEventListener('click', clearSequence);
-    resetBtn.addEventListener('click', resetToDefault);
-    
-    // Initialize with default sequence
-    resetToDefault();
-}
+
 
 function addToSequence(action) {
     if (action.startsWith('rotate')) {
