@@ -365,8 +365,8 @@ function configWebGL()
 {
     // Initialize the WebGL context
     gl = WebGLUtils.setupWebGL(canvas, {
-        alpha: true,  // Enable alpha channel
-        premultipliedAlpha: false  // Handle alpha properly
+        alpha: true,  // Enable alpha channel for transparency
+        premultipliedAlpha: false  // Handle alpha properly 
     });
     
     if(!gl)
@@ -450,6 +450,98 @@ function initSequenceBuilder() {
     
     // Initialize with default sequence
     resetToDefault();
+}
+
+function resetToDefault() {
+    animationSequence = [...defaultSequence];
+    updateSequenceDisplay();
+}
+
+function addToSequence(action) {
+    if (action.startsWith('rotate')) {
+        animationSequence.push({
+            type: 'rotate',
+            axis: action.slice(-1),
+            degrees: 360
+        });
+    } else if (action === 'scale') {
+        animationSequence.push({
+            type: 'scale',
+            scale: 1.0
+        });
+    } else if (action === 'bounce') {
+        animationSequence.push({
+            type: 'bounce',
+            duration: 5.0,  // Default duration
+            infinite: false  // Start with finite duration
+        });
+    } else {
+        animationSequence.push(action);
+    }
+    updateSequenceDisplay();
+}
+
+function removeFromSequence(index) {
+    animationSequence.splice(index, 1);
+    updateSequenceDisplay();
+}
+
+function clearSequence() {
+    animationSequence = [];
+    updateSequenceDisplay();
+}
+
+function updateSequenceDisplay() {
+    const container = document.getElementById('animation-sequence');
+    container.innerHTML = '';
+    
+    animationSequence.forEach((action, index) => {
+        const item = document.createElement('div');
+        item.className = 'sequence-item';
+        
+        if (typeof action === 'object') {
+            if (action.type === 'rotate') {
+                item.innerHTML = `
+                    Rotate ${action.axis}: 
+                    <input type="number" class="rotation-value" value="${action.degrees}" 
+                           min="-360" max="360" step="90"
+                           onchange="updateRotationValue(${index}, this.value)">°
+                    <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
+                `;
+            } else if (action.type === 'scale') {
+                item.innerHTML = `
+                    Scale to: 
+                    <input type="number" class="scale-value" value="${action.scale}" 
+                           min="0.1" max="5" step="0.1"
+                           onchange="updateScaleValue(${index}, this.value)">×
+                    <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
+                `;
+            } else if (action.type === 'bounce') {
+                item.innerHTML = `
+                    <div class="bounce-input-group">
+                        Bounce for: 
+                        <input type="number" class="bounce-value" value="${action.infinite ? '∞' : action.duration}" 
+                               min="1" max="20" step="0.5"
+                               ${action.infinite ? 'disabled' : ''}
+                               onchange="updateBounceValue(${index}, this.value)">s
+                        <label class="infinite-checkbox">
+                            <input type="checkbox" 
+                                   ${action.infinite ? 'checked' : ''} 
+                                   onchange="toggleInfiniteBounce(${index}, this.checked)">
+                            Infinite
+                        </label>
+                        <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
+                    </div>
+                `;
+            }
+        } else {
+            item.innerHTML = `
+                ${action}
+                <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
+            `;
+        }
+        container.appendChild(item);
+    });
 }
 
 // Render the graphics for viewing
@@ -694,10 +786,6 @@ function resetActionState() {
     isBouncing = false;
 }
 
-/*-----------------------------------------------------------------------------------*/
-// 3D Sierpinski Gasket
-/*-----------------------------------------------------------------------------------*/
-
 // Form a triangle
 function triangle(a, b, c, color)
 {
@@ -718,9 +806,7 @@ function tetra(a, b, c, d)
     triangle(b, c, d, 3);
 }
 
-/*-----------------------------------------------------------------------------------*/
-
-// Add these utility functions at the end of the file
+// Convert RGBA to hex
 function rgbaToHex(rgba) {
     return '#' + 
         Math.round(rgba[0] * 255).toString(16).padStart(2, '0') +
@@ -728,105 +814,12 @@ function rgbaToHex(rgba) {
         Math.round(rgba[2] * 255).toString(16).padStart(2, '0');
 }
 
+// Convert hex to RGBA
 function hexToRgba(hex) {
     const r = parseInt(hex.slice(1, 3), 16) / 255;
     const g = parseInt(hex.slice(3, 5), 16) / 255;
     const b = parseInt(hex.slice(5, 7), 16) / 255;
     return vec4(r, g, b, 1.0);
-}
-
-
-
-function addToSequence(action) {
-    if (action.startsWith('rotate')) {
-        animationSequence.push({
-            type: 'rotate',
-            axis: action.slice(-1),
-            degrees: 360
-        });
-    } else if (action === 'scale') {
-        animationSequence.push({
-            type: 'scale',
-            scale: 1.0
-        });
-    } else if (action === 'bounce') {
-        animationSequence.push({
-            type: 'bounce',
-            duration: 5.0,  // Default duration
-            infinite: false  // Start with finite duration
-        });
-    } else {
-        animationSequence.push(action);
-    }
-    updateSequenceDisplay();
-}
-
-function removeFromSequence(index) {
-    animationSequence.splice(index, 1);
-    updateSequenceDisplay();
-}
-
-function clearSequence() {
-    animationSequence = [];
-    updateSequenceDisplay();
-}
-
-function resetToDefault() {
-    animationSequence = [...defaultSequence];
-    updateSequenceDisplay();
-}
-
-function updateSequenceDisplay() {
-    const container = document.getElementById('animation-sequence');
-    container.innerHTML = '';
-    
-    animationSequence.forEach((action, index) => {
-        const item = document.createElement('div');
-        item.className = 'sequence-item';
-        
-        if (typeof action === 'object') {
-            if (action.type === 'rotate') {
-                item.innerHTML = `
-                    Rotate ${action.axis}: 
-                    <input type="number" class="rotation-value" value="${action.degrees}" 
-                           min="-360" max="360" step="90"
-                           onchange="updateRotationValue(${index}, this.value)">°
-                    <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
-                `;
-            } else if (action.type === 'scale') {
-                item.innerHTML = `
-                    Scale to: 
-                    <input type="number" class="scale-value" value="${action.scale}" 
-                           min="0.1" max="5" step="0.1"
-                           onchange="updateScaleValue(${index}, this.value)">×
-                    <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
-                `;
-            } else if (action.type === 'bounce') {
-                item.innerHTML = `
-                    <div class="bounce-input-group">
-                        Bounce for: 
-                        <input type="number" class="bounce-value" value="${action.infinite ? '∞' : action.duration}" 
-                               min="1" max="20" step="0.5"
-                               ${action.infinite ? 'disabled' : ''}
-                               onchange="updateBounceValue(${index}, this.value)">s
-                        <label class="infinite-checkbox">
-                            <input type="checkbox" 
-                                   ${action.infinite ? 'checked' : ''} 
-                                   onchange="toggleInfiniteBounce(${index}, this.checked)">
-                            Infinite
-                        </label>
-                        <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
-                    </div>
-                `;
-            }
-        } else {
-            item.innerHTML = `
-                ${action}
-                <button class="remove-btn" onclick="removeFromSequence(${index})">×</button>
-            `;
-        }
-        container.appendChild(item);
-    });
 }
 
 // Modify initAudio to work with uploaded music
@@ -837,7 +830,7 @@ function initAudio() {
     }
 }
 
-// Add this function to clean up resources
+// Clean up resources
 function cleanup() {
     if (backgroundMusic) {
         backgroundMusic.pause();
@@ -848,7 +841,7 @@ function cleanup() {
     canvas.classList.remove('show-background');
 }
 
-// Update the updateRotationValue function
+// Update rotation value
 function updateRotationValue(index, value) {
     const degrees = parseInt(value) || 360;
     if (typeof animationSequence[index] === 'object' && animationSequence[index].type === 'rotate') {
@@ -856,7 +849,7 @@ function updateRotationValue(index, value) {
     }
 }
 
-// Add this new function for handling scale value updates
+// Update scale value
 function updateScaleValue(index, value) {
     const scale = parseFloat(value) || 1.0;
     if (typeof animationSequence[index] === 'object' && 
@@ -865,7 +858,7 @@ function updateScaleValue(index, value) {
     }
 }
 
-// Add this helper function to generate random colors
+// Generate random colors
 function getRandomColor() {
     return vec4(
         Math.random(),  // R
@@ -875,7 +868,7 @@ function getRandomColor() {
     );
 }
 
-// Add this function to update colors and recompute the gasket
+// Update colors and recompute the gasket
 function updateRandomColors() {
     // Update each face with a random color
     for (let i = 0; i < currentColors.length; i++) {
@@ -894,7 +887,7 @@ function updateRandomColors() {
     gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW);
 }
 
-// Add new function to toggle infinite bounce
+// Toggle infinite bounce
 function toggleInfiniteBounce(index, checked) {
     if (typeof animationSequence[index] === 'object' && 
         animationSequence[index].type === 'bounce') {
@@ -904,7 +897,7 @@ function toggleInfiniteBounce(index, checked) {
     }
 }
 
-// Modify the togglePanelInteractivity function
+// Toggle panel interactivity
 function togglePanelInteractivity(enable) {
     const panel = document.querySelector('.panel');
     const interactiveElements = panel.querySelectorAll('button, input, label');
@@ -924,7 +917,7 @@ function togglePanelInteractivity(enable) {
     }
 }
 
-// Add this new function to update bounce duration
+// Update bounce duration
 function updateBounceValue(index, value) {
     const duration = parseFloat(value) || 5.0;
     if (typeof animationSequence[index] === 'object' && 
