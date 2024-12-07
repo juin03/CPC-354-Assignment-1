@@ -63,8 +63,10 @@ var targetScale = 2.0;
 
 // Bounce configuration
 var bounceAngle = Math.random() * Math.PI * 2; // Random initial angle
-const BOUNCE_WIDTH = 2.5; // Width of bounce area
-const BOUNCE_HEIGHT = 1.0; // Height of bounce area
+let normalizedWidth;
+let normalizedHeight;
+let BOUNCE_WIDTH;
+let BOUNCE_HEIGHT;
 
 // Animation sequence control
 let animationSequence = [];
@@ -561,6 +563,7 @@ function render()
     // Pass a 4x4 model view matrix from JavaScript to the GPU for use in shader
     modelViewMatrix = mat4();
     modelViewMatrix = mult(modelViewMatrix, scale(1, 1, 1));
+    modelViewMatrix = mult(modelViewMatrix, translate(0, 0.2357, 0));
     gl.uniformMatrix4fv(modelViewMatrixLoc, false, flatten(modelViewMatrix));
 
     // Draw the primitive / geometric shape
@@ -600,6 +603,7 @@ function recompute()
 function animUpdate() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     modelViewMatrix = mat4();
+    modelViewMatrix = mult(modelViewMatrix, translate(0, 0.2357, 0));
     
     const speedFactor = animationSpeed / 2.0 ;
     const currentAction = animationSequence[currentSequenceIndex];
@@ -684,6 +688,9 @@ function animUpdate() {
                 const moveSpeed = 0.03 * speedFactor;
                 const nextX = moveX + Math.cos(bounceAngle) * moveSpeed;
                 const nextY = moveY + Math.sin(bounceAngle) * moveSpeed;
+                
+                BOUNCE_WIDTH = 3.333 * (1 - (scaleNum - 1) * 0.25);
+                BOUNCE_HEIGHT = 1.677 * (1 - (scaleNum - 1) * 0.3);
                 
                 // Check boundary collisions
                 if (Math.abs(nextX) > BOUNCE_WIDTH) {
